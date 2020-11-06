@@ -1,0 +1,4 @@
+{
+    "Copy Target" : "/home/hari/.config/blender/2.92/scripts/addons",
+    "Cython Include Paths" : ["./animation_nodes_headers"]
+}

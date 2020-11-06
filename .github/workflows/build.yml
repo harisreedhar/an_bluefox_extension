@@ -1,0 +1,71 @@
+name: Build And Deploy
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: [3.7]
+        include:
+          - os: ubuntu-latest
+            python: 3.8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install Cython --install-option="--no-cython-compile"
+      - name: Download Animation Nodes' Headers
+        uses: i3h/download-release-asset@v1
+        with:
+          owner: JacquesLucke
+          repo: animation_nodes
+          tag: master-cd-build
+          file: animation_nodes_headers.zip
+      - name: Extract Headers
+        run: python -m zipfile -e animation_nodes_headers.zip ./
+      - name: Setup Development Enviroment
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build
+        run: python setup.py build --export --noversioncheck
+      - name: Upload Builds
+        uses: actions/upload-artifact@v2
+        with:
+          name: Builds
+          path: an_extra_nodes*.zip
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Download Builds
+        uses: actions/download-artifact@v2
+        with:
+          name: Builds
+      - name: Extract Branch Name
+        id: extract_branch_name
+        run: echo ::set-output name=branch::${GITHUB_REF#refs/heads/}
+      - name: Upload Release Assets
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.extract_branch_name.outputs.branch }}-cd-build
+          file: an_bluefox_extension*.zip
+          overwrite: true
+          file_glob: true
