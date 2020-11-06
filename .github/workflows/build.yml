@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Builds
-          path: an_extra_nodes*.zip
+          path: an_bluefox_extension*.zip
   deploy:
     name: Deploy
     needs: build
