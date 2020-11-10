@@ -24,7 +24,8 @@ class ColorMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        insertNode(layout, "an_ColorComposite", "Color Composite")  
+        insertNode(layout, "an_bf_ColorCompositeNode", "Color Composite")
+        insertNode(layout, "an_bf_MarchingCubesNode", "Marching Cubes")
 
 def register():
     bpy.types.NODE_MT_add.append(drawMenu)

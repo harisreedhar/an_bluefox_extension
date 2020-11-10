@@ -19,7 +19,7 @@ Created by <Harisreedhar>
 '''
 
 bl_info = {
-    "name": "Animation Nodes Test Extension",
+    "name": "AN Bluefox extension",
     "author": "an_bluefox_extension",
     "version": (1, 0, 0),
     "blender": (2, 90, 0),

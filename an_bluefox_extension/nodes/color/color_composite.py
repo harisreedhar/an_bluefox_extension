@@ -16,8 +16,8 @@ colormodeItems = [
     ("SUBTRACT", "Subtract", "subtract", "", 7)
 ]
 
-class ColorCompositeNode(bpy.types.Node, AnimationNode):
-    bl_idname = "an_ColorComposite"
+class BF_ColorCompositeNode(bpy.types.Node, AnimationNode):
+    bl_idname = "an_bf_ColorCompositeNode"
     bl_label = "Color Composite"
     errorHandlingType = "EXCEPTION"
     
