@@ -7,7 +7,8 @@ class BluefoxExtensionMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.menu("AN_MT_Colors_menu", text = "Color")
+        layout.menu("AN_MT_BF_Color_menu", text = "Color")
+        layout.menu("AN_MT_BF_Mesh_menu", text = "Mesh")
 
 def drawMenu(self, context):
     if context.space_data.tree_type != "an_AnimationNodeTree": return
@@ -18,13 +19,20 @@ def drawMenu(self, context):
     layout.separator()
     layout.menu("AN_MT_bluefox_extension_menu", text = "Bluefox Nodes", icon = "MESH_MONKEY")
 
-class ColorMenu(bpy.types.Menu):
-    bl_idname = "AN_MT_Colors_menu"
+class BF_ColorMenu(bpy.types.Menu):
+    bl_idname = "AN_MT_BF_Color_menu"
     bl_label = "Colors Menu"
 
     def draw(self, context):
         layout = self.layout
         insertNode(layout, "an_bf_ColorCompositeNode", "Color Composite")
+        
+class BF_MeshMenu(bpy.types.Menu):
+    bl_idname = "AN_MT_BF_Mesh_menu"
+    bl_label = "Mesh Menu"
+
+    def draw(self, context):
+        layout = self.layout
         insertNode(layout, "an_bf_MarchingCubesNode", "Marching Cubes")
 
 def register():
