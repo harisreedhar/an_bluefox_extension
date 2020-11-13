@@ -9,6 +9,7 @@ class BluefoxExtensionMenu(bpy.types.Menu):
         layout = self.layout
         layout.menu("AN_MT_BF_Color_menu", text = "Color")
         layout.menu("AN_MT_BF_Mesh_menu", text = "Mesh")
+        layout.menu("AN_MT_BF_Object_menu", text = "Object")
         layout.menu("AN_MT_BF_Spline_menu", text = "Spline")
 
 def drawMenu(self, context):
@@ -35,6 +36,14 @@ class BF_MeshMenu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         insertNode(layout, "an_bf_MarchingCubesNode", "Marching Cubes")
+
+class BF_ObjectMenu(bpy.types.Menu):
+    bl_idname = "AN_MT_BF_Object_menu"
+    bl_label = "Object Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        insertNode(layout, "an_bf_RigidBodyTriggerNode", "Rigidbody Trigger")
 
 class BF_SplineMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Spline_menu"
