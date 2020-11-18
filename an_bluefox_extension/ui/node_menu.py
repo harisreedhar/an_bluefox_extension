@@ -55,6 +55,7 @@ class BF_ObjectMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_DupliInstancer", "Dupli Instancer")
         insertNode(layout, "an_bf_RigidBodyTriggerNode", "Rigidbody Trigger")
 
 class BF_SplineMenu(bpy.types.Menu):
