@@ -12,6 +12,7 @@ class BluefoxExtensionMenu(bpy.types.Menu):
         layout.menu("AN_MT_BF_Mesh_menu", text = "Mesh")
         layout.menu("AN_MT_BF_Object_menu", text = "Object")
         layout.menu("AN_MT_BF_Spline_menu", text = "Spline")
+        layout.menu("AN_MT_BF_Utility_menu", text = "Utility")
 
 def drawMenu(self, context):
     if context.space_data.tree_type != "an_AnimationNodeTree": return
@@ -63,6 +64,14 @@ class BF_SplineMenu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         insertNode(layout, "an_bf_SplineTracerNode", "Spline Tracer")
+
+class BF_UtilityMenu(bpy.types.Menu):
+    bl_idname = "AN_MT_BF_Utility_menu"
+    bl_label = "Utility Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        insertNode(layout, "an_bf_SverchokInterfaceNode", "Sverchok Interface")
 
 def register():
     bpy.types.NODE_MT_add.append(drawMenu)
