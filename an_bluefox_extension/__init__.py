@@ -20,7 +20,7 @@ Created by <Harisreedhar>
 
 bl_info = {
     "name": "AN Bluefox extension",
-    "author": "an_bluefox_extension",
+    "author": "Harisreedhar",
     "version": (1, 0, 0),
     "blender": (2, 90, 0),
     "location": "Animation Nodes",
@@ -44,6 +44,6 @@ auto_load.init()
 
 def register():
     auto_load.register()
-    
+
 def unregister():
     auto_load.unregister()
