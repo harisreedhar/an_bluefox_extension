@@ -3,11 +3,12 @@ import numpy as np
 from bpy.props import *
 from ... libs import skimage
 from ... utils.formula import evaluateFormula
-from . c_utils import polygonIndicesList_From_triArray
+from . c_utils import polygonIndices_From_triArray
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 from animation_nodes . data_structures.meshes.validate import createValidEdgesList
 from animation_nodes . data_structures import (
     LongList,
+    UIntegerList,
     Vector3DList,
     PolygonIndicesList,
     EdgeIndicesList,
@@ -80,7 +81,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         vertArr, facesArr, normalArr, valueArr = skimage.marching_cubes(volume, level = threshold)
         vertArr = ((vertArr / samples) * (maxBound - minBound) + minBound)
         vertices = Vector3DList.fromNumpyArray(vertArr.ravel().astype('f'))
-        faces = polygonIndicesList_From_triArray(facesArr)
+        faces = polygonIndices_From_triArray(facesArr)
         return self.createMesh(vertices, faces), grid
 
     def createGrid(self, boundingBox, samples):
