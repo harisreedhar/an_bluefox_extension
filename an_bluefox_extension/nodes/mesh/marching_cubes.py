@@ -3,6 +3,7 @@ import numpy as np
 from bpy.props import *
 from ... libs import skimage
 from ... utils.formula import evaluateFormula
+from . c_utils import polygonIndicesList_From_triArray
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 from animation_nodes . data_structures.meshes.validate import createValidEdgesList
 from animation_nodes . data_structures import (
@@ -16,7 +17,7 @@ from animation_nodes . data_structures import (
 fieldTypeItems = [
     ("FALLOFF", "Falloff", "Use falloff field", "", 0),
     ("FORMULA", "Formula", "Use formula field", "", 1),
-    ("FUNCTION", "Function", "Use custom function field", "", 2),
+    ("FUNCTION", "Function", "Use function(x,y,z) as field", "", 2),
     ("ARRAY", "Array", "Use numpy array field", "", 3),
 ]
 
@@ -79,7 +80,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         vertArr, facesArr, normalArr, valueArr = skimage.marching_cubes(volume, level = threshold)
         vertArr = ((vertArr / samples) * (maxBound - minBound) + minBound)
         vertices = Vector3DList.fromNumpyArray(vertArr.ravel().astype('f'))
-        faces = PolygonIndicesList.fromValues(facesArr.tolist())
+        faces = polygonIndicesList_From_triArray(facesArr)
         return self.createMesh(vertices, faces), grid
 
     def createGrid(self, boundingBox, samples):
