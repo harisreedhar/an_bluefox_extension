@@ -16,7 +16,7 @@ class BF_TimeEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
     useInfiniteList: VectorizedSocket.newProperty()
 
     def create(self):
-        self.newInput("Matrix List", "Matrices", "matrices")
+        self.newInput("Matrix List", "Matrices", "matrices", dataIsModified = True)
         self.newInput("Float", "Time", "time")
         self.newInput(VectorizedSocket("Boolean", "useInfiniteList",
             ("Infinite", "infinites"),

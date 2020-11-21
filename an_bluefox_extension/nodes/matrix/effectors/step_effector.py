@@ -12,7 +12,7 @@ class BF_StepEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
     errorHandlingType = "EXCEPTION"
 
     def create(self):
-        self.newInput("Matrix List", "Matrices", "matrices")
+        self.newInput("Matrix List", "Matrices", "matrices", dataIsModified = True)
         self.newInput("Float", "Step", "step")
         self.createBasicInputs()
         self.newOutput("Matrix List", "Matrices", "matrices")

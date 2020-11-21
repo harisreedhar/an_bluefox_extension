@@ -25,7 +25,7 @@ class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
                         update = AnimationNode.refresh)
 
     def create(self):
-        self.newInput("Matrix List", "Matrices", "matrices")
+        self.newInput("Matrix List", "Matrices", "matrices", dataIsModified = True)
         self.createBasicInputs()
         self.newOutput("Matrix List", "Matrices", "matrices")
         self.newOutput("Float List", "Values", "effectorValues", hide = True)

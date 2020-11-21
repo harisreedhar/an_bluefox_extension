@@ -64,6 +64,12 @@ class EffectorBase:
         self.newInput("Interpolation", "Interpolation", "interpolation",
             defaultDrawType = "PROPERTY_ONLY")
 
+    def createMinMaxInterpolationInputs(self):
+        self.newInput("Float", "Min", "minValue", value = 0, hide = True)
+        self.newInput("Float", "Max", "maxValue", value = 1, hide = True)
+        self.newInput("Interpolation", "Interpolation", "interpolation",
+            defaultDrawType = "PROPERTY_ONLY")
+
     def updateSocketVisibility(self):
         self.inputs[-6].hide = not self.useTranslation
         self.inputs[-5].hide = not self.useRotation
@@ -109,3 +115,6 @@ class EffectorBase:
             newFalloff = MixFalloffs([falloff, custom], self.mixType, default = 1)
         newFalloff = RemapInterpolatedFalloff(newFalloff, 0, 1, outMin, outMax, interpolation)
         return newFalloff
+
+    def remapFalloff(self, falloff, interpolation, outMin = 0, outMax = 1):
+        return RemapInterpolatedFalloff(falloff, 0, 1, outMin, outMax, interpolation)
