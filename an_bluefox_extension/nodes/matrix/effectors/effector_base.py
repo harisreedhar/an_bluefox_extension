@@ -20,10 +20,22 @@ from animation_nodes . algorithms.matrices import (
     scaleMatrixList
 )
 
+mixTypeItems = [
+    ("ADD", "Add", "", "NONE", 0),
+    ("MULTIPLY", "Multiply", "", "NONE", 1),
+    ("MAX", "Max", "", "NONE", 2),
+    ("MIN", "Min", "", "NONE", 3),
+    ("NONE", "None", "", "NONE", 4)
+]
+
 class EffectorBase:
     def checkedPropertiesChanged(self, context):
             self.updateSocketVisibility()
             executionCodeChanged()
+
+    mixType: EnumProperty(name = "Mix Type", items = mixTypeItems,
+        description = "falloff and effector mix method",
+        default = "MULTIPLY", update = AnimationNode.refresh)
 
     useTranslation: BoolProperty(name = "Use Translation", default = False,
         update = checkedPropertiesChanged)
@@ -53,9 +65,12 @@ class EffectorBase:
             defaultDrawType = "PROPERTY_ONLY")
 
     def updateSocketVisibility(self):
-        self.inputs[2].hide = not self.useTranslation
-        self.inputs[3].hide = not self.useRotation
-        self.inputs[4].hide = not self.useScale
+        self.inputs[-6].hide = not self.useTranslation
+        self.inputs[-5].hide = not self.useRotation
+        self.inputs[-4].hide = not self.useScale
+
+    def drawFalloffMixType(self, layout):
+        layout.prop(self, "mixType", text="")
 
     def draw_MatrixTransformationProperties(self, layout):
         col = layout.column()
@@ -87,8 +102,10 @@ class EffectorBase:
         scales = extractMatrixScales(matrices)
         return translations, rotations, scales
 
-    def mixEffectorAndFalloff(self, effectorStrengths, falloff, interpolation, mixMode = "MULTIPLY", outMin = 0, outMax = 1):
+    def mixEffectorAndFalloff(self, effectorStrengths, falloff, interpolation, outMin = 0, outMax = 1):
         custom = CustomFalloff(effectorStrengths, 0)
-        newFalloff = MixFalloffs([falloff, custom], mixMode, default = 1)
+        newFalloff = custom
+        if self.mixType != "NONE":
+            newFalloff = MixFalloffs([falloff, custom], self.mixType, default = 1)
         newFalloff = RemapInterpolatedFalloff(newFalloff, 0, 1, outMin, outMax, interpolation)
         return newFalloff

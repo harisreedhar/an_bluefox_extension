@@ -39,6 +39,8 @@ class BF_MatrixMenu(bpy.types.Menu):
         layout = self.layout
         layout.label(text = "Effectors")
         insertNode(layout, "an_bf_FormulaEffector", "Formula Effector")
+        insertNode(layout, "an_bf_StepEffector", "Step Effector")
+        insertNode(layout, "an_bf_TimeEffector", "Time Effector")
         layout.separator()
 
 class BF_MeshMenu(bpy.types.Menu):

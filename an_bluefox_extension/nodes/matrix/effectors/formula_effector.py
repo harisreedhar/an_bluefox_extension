@@ -36,6 +36,7 @@ class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
         self.draw_MatrixTransformationProperties(layout)
 
     def drawAdvanced(self, layout):
+        self.drawFalloffMixType(layout)
         layout.prop(self, "incPosAttr")
         layout.label(text = "px,py,pz")
         layout.prop(self, "incRotAttr")
