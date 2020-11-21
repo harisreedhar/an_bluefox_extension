@@ -3,7 +3,7 @@ from bpy.props import *
 from mathutils import Matrix
 from . effector_base import EffectorBase
 from animation_nodes . base_types import AnimationNode
-from . c_utils import inheritMatrixOverSpline, matrixListLerp
+from . c_utils import inheritMatrixOverSpline, inhertMatrixLinear
 from animation_nodes . algorithms.rotations import directionsToMatrices
 from animation_nodes . events import executionCodeChanged, propertyChanged
 from animation_nodes . data_structures import FloatList, VirtualMatrix4x4List
@@ -75,20 +75,21 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
         if amount:
             if amount != len(mB):
                 mB = VirtualMatrix4x4List.create(mB, Matrix.Identity(4)).materialize(amount)
-            return matrixListLerp(mA, mB, influences)
+            return inhertMatrixLinear(mA, mB, influences)
         else:
             return mA
 
     def executeSpline(self, mA, mB, spline, samples, influences):
-        amount = len(mA)
-        if amount:
-            if amount != len(mB):
-                mB = VirtualMatrix4x4List.create(mB, Matrix.Identity(4)).materialize(amount)
-            samples = max(1, samples)
-            pathPoints, splineRotations = self.evalSpline(spline, samples)
-            result = inheritMatrixOverSpline(mA, mB, pathPoints, splineRotations, influences, self.align)
-            return result
-        else:
+        try:
+            amount = len(mA)
+            if amount:
+                if amount != len(mB):
+                    mB = VirtualMatrix4x4List.create(mB, Matrix.Identity(4)).materialize(amount)
+                samples = max(1, samples)
+                pathPoints, splineRotations = self.evalSpline(spline, samples)
+                result = inheritMatrixOverSpline(mA, mB, pathPoints, splineRotations, influences, self.align)
+                return result
+        except:
             return mA
 
     def evalSpline(self, spline, samples):
