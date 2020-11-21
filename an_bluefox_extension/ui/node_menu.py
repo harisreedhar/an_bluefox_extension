@@ -51,6 +51,7 @@ class BF_MeshMenu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         insertNode(layout, "an_bf_MarchingCubesNode", "Marching Cubes")
+        insertNode(layout, "an_bf_SimpleDeformNode", "Simple Deform")
 
 class BF_ObjectMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Object_menu"
