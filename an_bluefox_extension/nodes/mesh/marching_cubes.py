@@ -49,7 +49,9 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
 
         self.newOutput(VectorizedSocket("Mesh", "useThresholdList",
             ("Mesh", "mesh"), ("Mesh List", "mesh")))
+        self.newOutput("Vector List", "Normals", "normals", hide = True)
         self.newOutput("Vector List", "Grid Points", "gridPoints", hide = True)
+        self.newOutput("Float List", "Values", "values", hide = True)
 
         socket = self.inputs[-1]
         socket.useIsUsedProperty = True
@@ -62,13 +64,19 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         yield "ds = AN.data_structures"
         yield "mesh = ds.Mesh()"
         yield "gridPoints = ds.Vector3DList()"
+        yield "normals = ds.Vector3DList()"
+        yield "values = ds.DoubleList()"
         if "mesh" in required:
             yield "try:"
             yield "    boundingBox = ds.Vector3DList.fromValues(self.unityCube)"
             yield "    boundingBox.transform(transform)"
-            yield "    mesh, grid = self.generateMeshFromField(boundingBox, samples, field, threshold)"
+            yield "    mesh, grid, norm, val = self.generateMeshFromField(boundingBox, samples, field, threshold)"
             if "gridPoints" in required:
                 yield "    gridPoints = ds.Vector3DList.fromNumpyArray(grid.ravel().astype('f'))"
+            if "normals" in required:
+                yield "    normals = ds.Vector3DList.fromNumpyArray(norm.ravel().astype('f'))"
+            if "values" in required:
+                yield "    values = ds.DoubleList.fromNumpyArray(val.astype('float64'))"
             yield "except Exception as e:"
             yield "    print('Marching Cubes error:', str(e))"
             yield "    self.raiseErrorMessage('Mesh generation failed')"
@@ -82,7 +90,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         vertArr = ((vertArr / samples) * (maxBound - minBound) + minBound)
         vertices = Vector3DList.fromNumpyArray(vertArr.ravel().astype('f'))
         faces = polygonIndices_From_triArray(facesArr)
-        return self.createMesh(vertices, faces), grid
+        return self.createMesh(vertices, faces), grid, normalArr, valueArr
 
     def createGrid(self, boundingBox, samples):
         vs = np.array(boundingBox)
