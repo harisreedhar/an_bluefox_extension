@@ -7,8 +7,8 @@ from animation_nodes . nodes . vector . c_utils import calculateVectorLengths
 DeformTypeItems = [
     ("BEND", "Bend", "", "", 0),
     ("STRETCH", "Stretch", "", "", 1),
-    ("TWIST", "Twist", "", "", 2),
-    ("TAPER", "Taper", "", "", 3)
+    ("TAPER", "Taper", "", "", 2),
+    ("TWIST", "Twist", "", "", 3)
 ]
 
 axisItems = [
@@ -29,41 +29,39 @@ class BF_SimpleDeformNode(bpy.types.Node, AnimationNode):
 
     def create(self):
         self.newInput("Vector List", "Vertices", "vertices", dataIsModified = True)
-        self.newInput("Matrix", "Origin", "origin")
+        self.newInput("Matrix", "Matrix", "matrix")
         self.newInput("Float", "Factor", "factor", value = 0)
+        self.newInput("Falloff", "falloff", "falloff")
         self.newOutput("Vector List", "Vertices", "vertices")
-
-        if self.deformType in ("BEND", "TWIST"):
-            self.inputs[-1].name = "Angle"
 
     def draw(self, layout):
         layout.prop(self, "deformType", text = "")
         col = layout.column()
         col.row().prop(self, "axis", expand = True)
 
-    def execute(self, vertices, origin, factor):
+    def execute(self, vertices, matrix, factor, falloff):
         if len(vertices) == 0:
             return vertices
 
-        vertices.transform(origin.inverted_safe())
+        strengths = self.getFalloffStrengths(falloff, vertices)
+        vertices.transform(matrix.inverted_safe())
 
         if self.deformType == "BEND":
-            factor = self.getFactor(vertices, factor)
-            vertices = bendDeform(vertices, factor, axis = self.axis)
+            vertices = bendDeform(vertices, strengths, factor, axis = self.axis)
         elif self.deformType == "STRETCH":
-            vertices = stretchDeform(vertices, factor, axis = self.axis)
+            vertices = stretchDeform(vertices, strengths, factor, axis = self.axis)
         elif self.deformType == "TAPER":
-            vertices = taperDeform(vertices, factor, axis = self.axis)
+            vertices = taperDeform(vertices, strengths, factor, axis = self.axis)
         elif self.deformType == "TWIST":
-            factor = self.getFactor(vertices, factor)
-            vertices = twistDeform(vertices, factor, axis = self.axis)
+            vertices = twistDeform(vertices, strengths, factor, axis = self.axis)
 
-        vertices.transform(origin)
+        vertices.transform(matrix)
         return vertices
 
-    def getFactor(self, vertices, factor):
-        length = calculateVectorLengths(vertices)
-        maxValue = length.getMaxValue() + length.getMinValue() * 0.5
-        if maxValue != 0:
-            factor /= maxValue
-        return factor
+    def getFalloffStrengths(self, falloff, vectors):
+        try:
+            falloffEvaluator = falloff.getEvaluator("LOCATION")
+            strengths = falloffEvaluator.evaluateList(vectors)
+            return strengths
+        except:
+            self.raiseErrorMessage("This falloff cannot be evaluated for vectors")

@@ -152,30 +152,30 @@ cdef c_bendDeform(Vector3 *point, float factor, str axis):
         point.y = (y - 1.0 / factor) * cost + 1.0 / factor
         point.z = z
 
-def stretchDeform(Vector3DList points, float factor, str axis = 'Z'):
+def stretchDeform(Vector3DList points, FloatList strengths, float factor, str axis = 'Z'):
     cdef Py_ssize_t i
     cdef int amount = points.length
     for i in range(amount):
-        c_stretchDeform(&points.data[i], factor, axis)
+        c_stretchDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
 
-def taperDeform(Vector3DList points, float factor, str axis = 'Z'):
+def taperDeform(Vector3DList points, FloatList strengths, float factor, str axis = 'Z'):
     cdef Py_ssize_t i
     cdef int amount = points.length
     for i in range(amount):
-        c_taperDeform(&points.data[i], factor, axis)
+        c_taperDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
 
-def twistDeform(Vector3DList points, float factor, str axis = 'Z'):
+def twistDeform(Vector3DList points, FloatList strengths, float factor, str axis = 'Z'):
     cdef Py_ssize_t i
     cdef int amount = points.length
     for i in range(amount):
-        c_twistDeform(&points.data[i], factor, axis)
+        c_twistDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
 
-def bendDeform(Vector3DList points, float factor, str axis = 'Z'):
+def bendDeform(Vector3DList points, FloatList strengths, float factor, str axis = 'Z'):
     cdef Py_ssize_t i
     cdef int amount = points.length
     for i in range(amount):
-        c_bendDeform(&points.data[i], factor, axis)
+        c_bendDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
