@@ -29,7 +29,7 @@ class BF_ColorMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        insertNode(layout, "an_bf_MixRGBNode", "Mix RGB")
+        insertNode(layout, "an_bf_MixRGB", "Mix RGB")
 
 class BF_MatrixMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Matrix_menu"
