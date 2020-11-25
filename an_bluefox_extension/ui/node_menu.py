@@ -8,6 +8,7 @@ class BluefoxExtensionMenu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         layout.menu("AN_MT_BF_Color_menu", text = "Color")
+        layout.menu("AN_MT_BF_Falloff_menu", text = "Falloff")
         layout.menu("AN_MT_BF_Matrix_menu", text = "Matrix")
         layout.menu("AN_MT_BF_Mesh_menu", text = "Mesh")
         layout.menu("AN_MT_BF_Object_menu", text = "Object")
@@ -30,6 +31,15 @@ class BF_ColorMenu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         insertNode(layout, "an_bf_MixRGB", "Mix RGB")
+
+class BF_FalloffMenu(bpy.types.Menu):
+    bl_idname = "AN_MT_BF_Falloff_menu"
+    bl_label = "Falloff Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        insertNode(layout, "an_bf_MandelBulbFalloffNode", "Mandelbulb Falloff")
+        insertNode(layout, "an_bf_wavefalloff", "Wave Falloff")
 
 class BF_MatrixMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Matrix_menu"

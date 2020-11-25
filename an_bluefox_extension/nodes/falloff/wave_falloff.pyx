@@ -24,8 +24,8 @@ FalloffTypeItems = [
     ("MESH", "Mesh", "Mesh distance based wave", "", 3)
 ]
 
-class WaveFalloffNode(bpy.types.Node, AnimationNode):
-    bl_idname = "an_wavefalloff"
+class BF_WaveFalloffNode(bpy.types.Node, AnimationNode):
+    bl_idname = "an_bf_wavefalloff"
     bl_label = "Wave falloff"
     errorHandlingType = "EXCEPTION"
 
@@ -33,7 +33,7 @@ class WaveFalloffNode(bpy.types.Node, AnimationNode):
     __annotations__["waveType"] = EnumProperty(name = "Wave Type", default = "SINE",
         items = WaveTypeItems, update = AnimationNode.refresh)
     __annotations__["falloffType"] = EnumProperty(name = "Falloff Type", default = "POINT",
-        items = FalloffTypeItems, update = AnimationNode.refresh)        
+        items = FalloffTypeItems, update = AnimationNode.refresh)
 
     def create(self):
         if self.falloffType == "POINT":
@@ -42,13 +42,13 @@ class WaveFalloffNode(bpy.types.Node, AnimationNode):
             self.newInput("Vector", "Origin", "origin")
             self.newInput("Vector", "Direction", "direction", value = (1, 0, 0))
             self.newInput("Float", "Size", "size", value = 2.0)
-        elif self.falloffType == "INDEX":    
+        elif self.falloffType == "INDEX":
             self.newInput("Integer", "Index", "index", value = 0)
             self.newInput("Integer", "Amount", "amount", value = 10, minValue = 0)
         elif self.falloffType == "MESH":
             self.newInput("Mesh", "Mesh", "mesh")
             self.newInput("Float", "Max Distance", "bvhMaxDistance", minValue = 0, value = 1e6, hide = True)
-            self.newInput("Float", "Epsilon", "epsilon", minValue = 0, hide = True)    
+            self.newInput("Float", "Epsilon", "epsilon", minValue = 0, hide = True)
         self.newInput("Float", "Frequency", "frequency", value = 1)
         self.newInput("Float", "Offset", "offset", value = 0)
         self.newInput("Float", "Amplitude", "amplitude", value = 1)
@@ -61,10 +61,10 @@ class WaveFalloffNode(bpy.types.Node, AnimationNode):
         layout.prop(self, "waveType", text = "")
 
     def getExecutionFunctionName(self):
-        if self.falloffType == "POINT": 
+        if self.falloffType == "POINT":
             return "executePoint"
         elif self.falloffType == "DIRECTIONAL":
-            return "executeDirectional"    
+            return "executeDirectional"
         elif self.falloffType == "INDEX":
             return "executeIndex"
         elif self.falloffType == "MESH":
@@ -74,12 +74,12 @@ class WaveFalloffNode(bpy.types.Node, AnimationNode):
         return WavePointFalloff(origin, frequency, offset, amplitude, damping, self.waveType)
 
     def executeDirectional(self, origin, direction, size, frequency, offset, amplitude, damping):
-        return WaveDirectionalFalloff(origin, direction, size, frequency, offset, amplitude, damping, self.waveType)            
+        return WaveDirectionalFalloff(origin, direction, size, frequency, offset, amplitude, damping, self.waveType)
 
     def executeIndex(self, index, amount, frequency, offset, amplitude, damping):
         return WaveIndexFalloff(index, index + amount - 1, frequency, offset, amplitude, damping, self.waveType)
 
-    def executeMesh(self, mesh, bvhMaxDistance, epsilon, frequency, offset, amplitude, damping):   
+    def executeMesh(self, mesh, bvhMaxDistance, epsilon, frequency, offset, amplitude, damping):
         vectorList, polygonsIndices = self.validMesh(mesh)
         bvhTree = BVHTree.FromPolygons(vectorList, polygonsIndices, epsilon = max(epsilon, 0))
 
@@ -94,9 +94,9 @@ class WaveFalloffNode(bpy.types.Node, AnimationNode):
         if len(polygonsIndices.indices) == 0:
             self.raiseErrorMessage("Invalid Mesh.")
 
-        return vectorList, polygonsIndices        
+        return vectorList, polygonsIndices
 
-################################## Point Distance based falloff ################################## 
+################################## Point Distance based falloff ##################################
 
 cdef class WavePointFalloff(BaseFalloff):
     cdef:
@@ -113,13 +113,13 @@ cdef class WavePointFalloff(BaseFalloff):
         self.clamped = True
         setVector3(&self.origin, origin)
         self.dataType = "LOCATION"
-        
+
     @cython.cdivision(True)
     cdef float evaluate(self, void *object, Py_ssize_t index):
-        cdef float influence = distanceVec3(<Vector3*>object, &self.origin)    
+        cdef float influence = distanceVec3(<Vector3*>object, &self.origin)
         return wave(influence, self.frequency, self.offset, self.amplitude, self.damping, self.waveType)
 
-################################## Direction based falloff ################################## 
+################################## Direction based falloff ##################################
 
 cdef class WaveDirectionalFalloff(BaseFalloff):
     cdef:
@@ -138,14 +138,14 @@ cdef class WaveDirectionalFalloff(BaseFalloff):
         setVector3(&self.origin, origin)
         setVector3(&self.direction, direction)
         self.dataType = "LOCATION"
-        
+
     @cython.cdivision(True)
     cdef float evaluate(self, void *object, Py_ssize_t index):
         cdef float distance = signedDistance(&self.origin, &self.direction, <Vector3*>object)
         cdef float influence = 1 - distance / self.size
         influence = max(min(influence, 1), 0)
 
-        return wave(influence, self.frequency, self.offset, self.amplitude, self.damping, self.waveType)                       
+        return wave(influence, self.frequency, self.offset, self.amplitude, self.damping, self.waveType)
 
 ################################## Index based falloff ##################################
 
@@ -173,14 +173,14 @@ cdef class WaveIndexFalloff(BaseFalloff):
         cdef float influence
         if index <= self.index:
             influence = 0
-        if index >= self.amount: 
+        if index >= self.amount:
             influence = 1
         else:
             influence = <float>(index - self.index) / self.indexDiff
 
         return wave(influence, self.frequency, self.offset, self.amplitude, self.damping, self.waveType)
 
-################################## Mesh Distance based falloff ################################## 
+################################## Mesh Distance based falloff ##################################
 
 cdef class WaveMeshFalloff(BaseFalloff):
     cdef:
@@ -200,7 +200,7 @@ cdef class WaveMeshFalloff(BaseFalloff):
         self.waveType = waveType
         self.clamped = True
         self.dataType = "LOCATION"
-        
+
     @cython.cdivision(True)
     cdef float evaluate(self, void *object, Py_ssize_t index):
         cdef float influence
@@ -208,8 +208,8 @@ cdef class WaveMeshFalloff(BaseFalloff):
         influence = self.bvhTree.find_nearest(Vector((v.x, v.y, v.z)), self.bvhMaxDistance)[3]
 
         return wave(influence, self.frequency, self.offset, self.amplitude, self.damping, self.waveType)
-                      
-################################## Wave Function ################################## 
+
+################################## Wave Function ##################################
 
 @cython.cdivision(True)
 cdef float wave(float influence, float frequency, float offset, float amplitude, float damping, str waveType):
@@ -222,7 +222,7 @@ cdef float wave(float influence, float frequency, float offset, float amplitude,
     elif waveType == "SQUARE":
         temp = sin(2 * M_PI * influence * frequency + offset)
         if temp < 0:
-            result = -1 
+            result = -1
         else:
             result = 1
     elif waveType == "TRIANGULAR":
@@ -230,5 +230,5 @@ cdef float wave(float influence, float frequency, float offset, float amplitude,
         result = (temp / M_PI + 0.5) * 2 - 1 # make range -1 to 1
     elif waveType == "SAW":
         result = 2 / M_PI * atan(1 / tan(influence * frequency * M_PI + offset))
-        
+
     return result * amplitude * 2.71827 ** -(damping * influence)
