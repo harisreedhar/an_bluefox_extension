@@ -87,6 +87,7 @@ class BF_UtilityMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_NormalizeFloatsNode", "Auto Normalize Floats")
         insertNode(layout, "an_bf_SverchokInterfaceNode", "Sverchok Interface")
 
 def register():
