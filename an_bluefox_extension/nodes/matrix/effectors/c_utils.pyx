@@ -1,11 +1,20 @@
 from libc.math cimport sqrt, ceil, floor, abs as absNumber
 
+from animation_nodes . math cimport Vector3, setMatrixTranslation, setScaleMatrix, mixVec3, mixQuat, Matrix4, Quaternion
+
 from animation_nodes . nodes . matrix . c_utils import*
+
+from .... utils.mix cimport (
+    vectorLerpInPlace,
+    eulerToQuaternion,
+    quaternionToMatrix4,
+    quaternionNlerpInPlace
+)
 
 from .... utils.mix import (
     quaternionsToEulers, quaternionListLerp,
     quaternionListNlerp, vectorListLerp,
-    matrixListLerp
+    matrixListLerp, quaternionsToMatrices
 )
 
 from animation_nodes . data_structures cimport (
@@ -145,4 +154,76 @@ def inheritMatrixOverSpline(Matrix4x4List mA,
 def inhertMatrixLinear(Matrix4x4List mA, Matrix4x4List mB, FloatList influences):
     return matrixListLerp(mA, mB, influences)
 
+def matrixTranslationLerp(Matrix4x4List matrices, VirtualVector3DList translations, FloatList influences):
+    cdef Vector3 target
+    cdef Py_ssize_t i
+    cdef Py_ssize_t amount = matrices.length
+    cdef Vector3DList fromLocation = extractMatrixTranslations(matrices)
+    for i in range(amount):
+        vectorLerpInPlace(&target, fromLocation.data + i, translations.get(i), influences.data[i])
+        setMatrixTranslation(matrices.data + i, &target)
+    return matrices
+
+def matrixRotationLerp(Matrix4x4List matrices, VirtualEulerList rotations, FloatList influences):
+    cdef QuaternionList fromQuaternions = Matrix4x4List.toQuaternions(matrices)
+    cdef Quaternion q, temp
+    cdef Py_ssize_t i
+    cdef Py_ssize_t amount = matrices.length
+    cdef Matrix4x4List result = Matrix4x4List(length = amount)
+    for i in range(amount):
+        eulerToQuaternion(&q, rotations.get(i))
+        quaternionNlerpInPlace(&temp, fromQuaternions.data + i, &q, influences.data[i])
+        quaternionToMatrix4(result.data + i, &temp)
+    return result
+
+def matrixScaleLerp(Matrix4x4List matrices, VirtualVector3DList scales, FloatList influences):
+    cdef Vector3 target
+    cdef Py_ssize_t i
+    cdef Py_ssize_t amount = matrices.length
+    cdef Vector3DList fromScale = extractMatrixScales(matrices)
+    cdef Matrix4x4List result = Matrix4x4List(length = amount)
+    for i in range(amount):
+        vectorLerpInPlace(&target, fromScale.data + i, scales.get(i), influences.data[i])
+        setScaleMatrix(result.data + i, &target)
+    return result
+
 ################################################# Inheritance effector code end #################################################
+
+################################################### Inheritance effector code ###################################################
+
+cdef getDirection(Vector3DList vectors, Vector3 *target, Py_ssize_t negFlag = 1):
+    cdef Py_ssize_t i
+    cdef Py_ssize_t count = vectors.length
+    cdef float vectorLength, x, y, z
+    cdef Vector3DList outVectors = Vector3DList(length = count)
+
+    for i in range(count):
+        x = vectors.data[i].x - target.x
+        y = vectors.data[i].y - target.y
+        z = vectors.data[i].z - target.z
+
+        vectorLength = sqrt(x*x + y*y + z*z)
+        if vectorLength == 0:
+            vectorLength = 0.00001
+
+        outVectors.data[i].x = x / (vectorLength * vectorLength) * negFlag
+        outVectors.data[i].y = y / (vectorLength * vectorLength) * negFlag
+        outVectors.data[i].z = z / (vectorLength * vectorLength) * negFlag
+
+    return outVectors
+
+def getDirections(Vector3DList points, Vector3DList targets):
+    cdef Py_ssize_t i, j
+    cdef Py_ssize_t count = points.length
+    cdef Py_ssize_t targetCount = targets.length
+    cdef Vector3DList directions = Vector3DList(length = count)
+    cdef Vector3DList temp = Vector3DList()
+
+    for i in range(targetCount):
+        temp = getDirection(points, targets.data + i)
+        for j in range(count):
+            directions.data[j].x += temp.data[j].x
+            directions.data[j].y += temp.data[j].y
+            directions.data[j].z += temp.data[j].z
+
+    return directions

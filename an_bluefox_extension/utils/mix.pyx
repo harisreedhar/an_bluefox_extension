@@ -15,6 +15,51 @@ from animation_nodes . data_structures cimport (
     Interpolation
 )
 
+cdef eulerToQuaternion(Quaternion *q, Euler3 *e):
+    cdef float c1 = cos(e.x)
+    cdef float s1 = sin(e.x)
+    cdef float c2 = cos(e.y)
+    cdef float s2 = sin(e.y)
+    cdef float c3 = cos(e.z)
+    cdef float s3 = sin(e.z)
+    q.w = sqrt(1.0 + c1 * c2 + c1*c3 - s1 * s2 * s3 + c2*c3) / 2.0
+    cdef float w4 = (4.0 * q.w)
+    q.x = (c2 * s3 + c1 * s3 + s1 * s2 * c3) / w4
+    q.y = (s1 * c2 + s1 * c3 + c1 * s2 * s3) / w4
+    q.z = (-s1 * s3 + c1 * s2 * c3 +s2) / w4
+
+cdef quaternionToMatrix4(Matrix4 *m, Quaternion *q):
+    cdef float sqw, sqx, sqy, sqz, invs, tmp1, tmp2
+
+    sqw = q.w * q.w
+    sqx = q.x * q.x
+    sqy = q.y * q.y
+    sqz = q.z * q.z
+    invs = 1 / (sqx + sqy + sqz + sqw)
+
+    m.a11 = ( sqx - sqy - sqz + sqw)*invs
+    m.a22 = (-sqx + sqy - sqz + sqw)*invs
+    m.a33 = (-sqx - sqy + sqz + sqw)*invs
+
+    tmp1 = q.x * q.y
+    tmp2 = q.z * q.w
+    m.a21 = 2.0 * (tmp1 + tmp2)*invs
+    m.a12 = 2.0 * (tmp1 - tmp2)*invs
+
+    tmp1 = q.x * q.z
+    tmp2 = q.y * q.w
+    m.a31 = 2.0 * (tmp1 - tmp2)*invs
+    m.a13 = 2.0 * (tmp1 + tmp2)*invs
+
+    tmp1 = q.y * q.z
+    tmp2 = q.x * q.w
+    m.a32 = 2.0 * (tmp1 + tmp2)*invs
+    m.a23 = 2.0 * (tmp1 - tmp2)*invs
+
+    m.a14 = m.a24 = m.a34 = 0
+    m.a41 = m.a42 = m.a43 = 0
+    m.a44 = 1
+
 def quaternionsToEulers(QuaternionList q):
     cdef Py_ssize_t i
     cdef Py_ssize_t amount = q.length
@@ -24,6 +69,43 @@ def quaternionsToEulers(QuaternionList q):
     for i in range(amount):
         quaternionToEulerInPlace(&e.data[i], &q.data[i])
     return e
+
+def quaternionsToMatrices(QuaternionList q):
+    cdef Py_ssize_t count = len(q)
+    cdef Matrix4x4List m = Matrix4x4List(length = count)
+    cdef double sqw, sqx, sqy, sqz, invs, tmp1, tmp2
+
+    for i in range(count):
+        sqw = q.data[i].w * q.data[i].w
+        sqx = q.data[i].x * q.data[i].x
+        sqy = q.data[i].y * q.data[i].y
+        sqz = q.data[i].z * q.data[i].z
+        invs = 1 / (sqx + sqy + sqz + sqw)
+
+        m.data[i].a11 = ( sqx - sqy - sqz + sqw)*invs
+        m.data[i].a22 = (-sqx + sqy - sqz + sqw)*invs
+        m.data[i].a33 = (-sqx - sqy + sqz + sqw)*invs
+
+        tmp1 = q.data[i].x * q.data[i].y
+        tmp2 = q.data[i].z * q.data[i].w
+        m.data[i].a21 = 2.0 * (tmp1 + tmp2)*invs
+        m.data[i].a12 = 2.0 * (tmp1 - tmp2)*invs
+
+        tmp1 = q.data[i].x * q.data[i].z
+        tmp2 = q.data[i].y * q.data[i].w
+        m.data[i].a31 = 2.0 * (tmp1 - tmp2)*invs
+        m.data[i].a13 = 2.0 * (tmp1 + tmp2)*invs
+
+        tmp1 = q.data[i].y * q.data[i].z
+        tmp2 = q.data[i].x * q.data[i].w
+        m.data[i].a32 = 2.0 * (tmp1 + tmp2)*invs
+        m.data[i].a23 = 2.0 * (tmp1 - tmp2)*invs
+
+        m.data[i].a14 = m.data[i].a24 = m.data[i].a34 = 0
+        m.data[i].a41 = m.data[i].a42 = m.data[i].a43 = 0
+        m.data[i].a44 = 1
+
+    return m
 
 cdef quaternionToEulerInPlace(Euler3 *e, Quaternion *q):
     #quaternionNormalize_InPlace(q)
