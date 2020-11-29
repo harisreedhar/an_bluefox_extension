@@ -64,7 +64,8 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
         self.draw_MatrixTransformationProperties(layout)
 
     def drawAdvanced(self, layout):
-        layout.prop(self, "resolution")
+        if self.selectMode == "SPLINE":
+            layout.prop(self, "resolution")
 
     def getExecutionCode(self, required):
         if "matrices" in required or "effectorValues" in required:
