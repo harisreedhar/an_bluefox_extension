@@ -38,6 +38,7 @@ class BF_FalloffMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_MathFalloffNode", "Math Falloff")
         insertNode(layout, "an_bf_MandelBulbFalloffNode", "Mandelbulb Falloff")
         insertNode(layout, "an_bf_ShapeFalloffNode", "Shape Falloff")
         insertNode(layout, "an_bf_wavefalloff", "Wave Falloff")
