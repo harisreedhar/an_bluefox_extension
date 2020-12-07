@@ -11,7 +11,7 @@ collisionShapeItems = [
     ("CYLINDER", "Cylinder", "", "NONE", 3),
     ("CONE", "Cone", "", "NONE", 4),
     ("CONVEX_HULL", "Convex Hull", "", "NONE", 5),
-    ("MESH", "Mesh", "", "NONE", 6)    
+    ("MESH", "Mesh", "", "NONE", 6)
 ]
 
 class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
@@ -28,6 +28,7 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
     collisionShape: EnumProperty(name = "Collision Shape", default = "CONVEX_HULL",
         items = collisionShapeItems, update = AnimationNode.refresh)
     enableShape: BoolProperty(name = "Is Used", default = False, update = AnimationNode.refresh)
+    enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = True, update = AnimationNode.refresh)
 
     def create(self):
         self.newInput(VectorizedSocket("Object", "useObjectList",
@@ -54,18 +55,18 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
             ("Frictions", "friction")))
         self.newInput(VectorizedSocket("Float", toProp("useLinearDampingList"),
             ("Linear Damping", "linear_damping", dict(value = 0.040)),
-            ("Linear Dampings", "linear_damping")))    
+            ("Linear Dampings", "linear_damping")))
         self.newInput(VectorizedSocket("Float", toProp("useAngularDampingList"),
             ("Angular Damping", "angular_damping", dict(value = 0.1)),
             ("Angular Dampings", "angular_damping")))
         self.newInput(VectorizedSocket("Float", toProp("useCollisionMarginList"),
             ("Collision Margin", "collision_margin", dict(value = 0.04)),
-            ("Collision Margins", "collision_margin")))    
+            ("Collision Margins", "collision_margin")))
         self.newInput("Boolean List", "Collections (20)", "collections")
 
         self.newOutput(VectorizedSocket("Object", "useObjectList",
             ("Object", "object", dict(defaultDrawType = "PROPERTY_ONLY")),
-            ("Objects", "objects"), codeProperties = dict(allowListExtension = False)))   
+            ("Objects", "objects"), codeProperties = dict(allowListExtension = False)))
 
         for socket in self.inputs[3:]:
             socket.useIsUsedProperty = True
@@ -82,6 +83,9 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
             testIcon = "LAYER_ACTIVE"
         row2.prop(self, "enableShape", text = "", icon = testIcon)
         row.active = self.enableShape
+
+    def drawAdvanced(self, layout):
+        layout.prop(self, "enableDepsgraph")
 
     def getExecutionCode(self, required):
         yield "rigid_body = self.getRigidBodyObject(object)"
@@ -113,12 +117,17 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
                 return None
             return rigid_body
 
+    objectIndex = 0
     def evaluateFalloff(self, falloff, object):
-        #location = getEvaluatedID(object).location
-        location = object.location
+        location = (0,0,0)
+        if self.enableDepsgraph:
+            location = getEvaluatedID(object).location
+        else:
+            location = object.location
         falloffEvaluator = self.getFalloffEvaluator(falloff)
         locations = Vector3DList.fromValue(location)
-        influences = falloffEvaluator.evaluateList(locations)
+        influences = falloffEvaluator.evaluateList(locations, startIndex = self.objectIndex)
+        self.objectIndex += 1
         return influences[0]
 
     def getFalloffEvaluator(self, falloff):
