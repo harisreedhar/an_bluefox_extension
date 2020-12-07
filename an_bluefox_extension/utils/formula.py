@@ -10,7 +10,7 @@ def evaluateFormula(formula, count = 0, falloff = 0,
                           x = 0, y = 0, z = 0):
 
     id = np.linspace(0, count, num = count, dtype = "int")
-    f = bpy.context.scene.frame_current
+    frame = bpy.context.scene.frame_current
 
     # constants
     pi = np.pi

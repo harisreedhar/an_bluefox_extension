@@ -13,7 +13,7 @@ class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
     bl_width_default = 200
     errorHandlingType = "EXCEPTION"
 
-    formula: StringProperty(name = "Formula", default = "sin(id/count*2*pi + f/10)",
+    formula: StringProperty(name = "Formula", default = "sin(id/count*2*pi + frame/10)",
                         update = AnimationNode.refresh)
     incPosAttr: BoolProperty(name = "Include position variables", default = True,
                         update = AnimationNode.refresh)
