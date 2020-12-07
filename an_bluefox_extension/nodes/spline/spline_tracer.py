@@ -39,21 +39,23 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode, SplineEvaluationBase):
             ("Spline", "spline"), ("Splines", "spline")))
 
     def draw(self, layout):
-        layout.prop(self, "splineType", text = "")    
+        layout.prop(self, "splineType", text = "")
 
     def execute(self, point, *args):
-        if self.network.isSubnetwork:
-            self.raiseErrorMessage("This node can't be used inside Subprogram")
         if self.useVectorList:
             return self.tracePointsToSplines(point, args)
         return self.tracePointsToSplines([point], args)[0]
 
+    loopingIndex = 0
     def tracePointsToSplines(self, *args):
         points = args[0]
         identifier = self.identifier
+        if self.network.isSubnetwork:
+            identifier = self.network.identifier + str(self.loopingIndex)
         tracePointToSpline = self.tracePointToSpline
         splines = [tracePointToSpline(identifier + str(i),
                     point, args[1]) for i, point in enumerate(points)]
+        self.loopingIndex += 1
         return splines
 
     def tracePointToSpline(self, identifier, point, args):
@@ -114,4 +116,4 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode, SplineEvaluationBase):
         return
 
     def getCachedSpline(self, identifier):
-        return self.getCache().get(identifier, None)    
+        return self.getCache().get(identifier, None)
