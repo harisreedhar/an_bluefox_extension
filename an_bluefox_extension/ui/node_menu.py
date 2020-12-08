@@ -62,6 +62,7 @@ class BF_MeshMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_FindMeshTensionNode", "Find Mesh Tension")
         insertNode(layout, "an_bf_MarchingCubesNode", "Marching Cubes")
         insertNode(layout, "an_bf_SimpleDeformNode", "Simple Deform")
 

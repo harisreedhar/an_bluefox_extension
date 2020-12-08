@@ -4,15 +4,16 @@ from libc.math cimport sin, cos
 
 from animation_nodes . math cimport (
      Quaternion, Euler3, Vector3, Matrix4,
-     setTranslationRotationScaleMatrix, quaternionNormalize_InPlace
+     setTranslationRotationScaleMatrix, quaternionNormalize_InPlace,
+     lengthVec3
 )
 
 from animation_nodes . data_structures cimport (
     Vector3DList, DoubleList, FloatList, EulerList, Matrix4x4List,
     QuaternionList, VirtualQuaternionList,
     VirtualVector3DList, VirtualEulerList, VirtualMatrix4x4List,
-    VirtualDoubleList, VirtualFloatList,
-    Interpolation
+    VirtualDoubleList, VirtualFloatList, Mesh,
+    Interpolation, EdgeIndicesList
 )
 
 cdef c_polygonIndices_From_triArray(unsigned int [:, :] triArray):
@@ -179,3 +180,37 @@ def bendDeform(Vector3DList points, FloatList strengths, float factor, str axis 
     for i in range(amount):
         c_bendDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
+
+# https://github.com/ScottishCyclops/tensionmap
+def findMeshTension(Mesh mesh1, Mesh mesh2, float multiplier):
+    cdef EdgeIndicesList mesh1Edges = mesh1.edges
+    cdef Vector3DList mesh1Vertices = mesh1.vertices
+    cdef Vector3DList mesh2Vertices = mesh2.vertices
+
+    cdef Py_ssize_t edgeAmount = mesh1Edges.length
+    cdef Py_ssize_t i, index1, index2
+
+    cdef Vector3 v1
+    cdef Vector3 v2
+    cdef float factor
+
+    cdef DoubleList weights = DoubleList(length = mesh1Vertices.length)
+    weights.fill(0)
+
+    for i in range(edgeAmount):
+        index1 = <Py_ssize_t>mesh1Edges.data[i].v1
+        index2 = <Py_ssize_t>mesh1Edges.data[i].v2
+
+        v1.x = mesh1Vertices.data[index1].x - mesh1Vertices.data[index2].x
+        v1.y = mesh1Vertices.data[index1].y - mesh1Vertices.data[index2].y
+        v1.z = mesh1Vertices.data[index1].z - mesh1Vertices.data[index2].z
+
+        v2.x = mesh2Vertices.data[index1].x - mesh2Vertices.data[index2].x
+        v2.y = mesh2Vertices.data[index1].y - mesh2Vertices.data[index2].y
+        v2.z = mesh2Vertices.data[index1].z - mesh2Vertices.data[index2].z
+
+        factor = (lengthVec3(&v1) - lengthVec3(&v2)) * multiplier
+        weights.data[index1] -= factor
+        weights.data[index2] -= factor
+
+    return weights
