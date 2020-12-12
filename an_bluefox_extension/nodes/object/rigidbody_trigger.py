@@ -1,6 +1,5 @@
 import bpy
 from bpy.props import *
-from animation_nodes . data_structures import Vector3DList
 from animation_nodes . utils.depsgraph import getEvaluatedID
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 
@@ -125,10 +124,9 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         else:
             location = object.location
         falloffEvaluator = self.getFalloffEvaluator(falloff)
-        locations = Vector3DList.fromValue(location)
-        influences = falloffEvaluator.evaluateList(locations, startIndex = self.objectIndex)
+        influence = falloffEvaluator(location, self.objectIndex)
         self.objectIndex += 1
-        return influences[0]
+        return influence
 
     def getFalloffEvaluator(self, falloff):
         try: return falloff.getEvaluator("LOCATION")
