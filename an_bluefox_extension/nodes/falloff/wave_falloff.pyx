@@ -3,6 +3,7 @@ from bpy.props import *
 from animation_nodes . base_types import AnimationNode
 from libc.math cimport sin, cos, tan, asin, acos, atan, M_PI
 from animation_nodes . data_structures cimport CompoundFalloff, Falloff
+from animation_nodes . nodes . falloff . remap_falloff import RemapFalloff
 
 WaveTypeItems = [
     ("SINE", "Sine", "Sine wave", "", 0),
@@ -28,35 +29,33 @@ class BF_WaveFalloffNode(bpy.types.Node, AnimationNode):
         self.newInput("Float", "Amplitude", "amplitude", value = 1)
         self.newInput("Float", "Damping", "damping")
 
-        self.newOutput("Falloff", "Falloff", "falloff")
+        self.newOutput("Falloff", "Falloff", "falloffOut")
 
     def draw(self, layout):
         row = layout.row(align = True)
         row.prop(self, "waveType", text = "")
 
     def execute(self, falloff, frequency, offset, amplitude, damping):
-        return WaveFalloffs(falloff, self.waveType, frequency, offset, amplitude, damping)
+        return RemapFalloff(WaveFalloffs(falloff, self.waveType, frequency, offset, damping), -1, 1, 0, amplitude)
 
 class WaveFalloffs:
-    def __new__(cls, Falloff falloff not None, str method not None, float frequency, float offset, float amplitude, float damping):
-        if method == "SINE": return SinWaveFalloff(falloff, frequency, offset, amplitude, damping)
-        elif method == "SQUARE": return SquareWaveFalloff(falloff, frequency, offset, amplitude, damping)
-        elif method == "TRIANGULAR": return TriangularWaveFalloff(falloff, frequency, offset, amplitude, damping)
-        elif method == "SAW": return SawWaveFalloff(falloff, frequency, offset, amplitude, damping)
+    def __new__(cls, Falloff falloff not None, str method not None, float frequency, float offset, float damping):
+        if method == "SINE": return SinWaveFalloff(falloff, frequency, offset, damping)
+        elif method == "SQUARE": return SquareWaveFalloff(falloff, frequency, offset, damping)
+        elif method == "TRIANGULAR": return TriangularWaveFalloff(falloff, frequency, offset, damping)
+        elif method == "SAW": return SawWaveFalloff(falloff, frequency, offset, damping)
 
 cdef class WaveFalloffBase(CompoundFalloff):
     cdef:
         Falloff falloff
         float frequency
         float offset
-        float amplitude
         float damping
 
-    def __cinit__(self, Falloff falloff, float frequency, float offset, float amplitude, float damping):
+    def __cinit__(self, Falloff falloff, float frequency, float offset, float damping):
         self.falloff = falloff
         self.frequency = frequency
         self.offset = offset
-        self.amplitude = amplitude
         self.damping = damping
 
     cdef list getDependencies(self):
@@ -65,7 +64,7 @@ cdef class WaveFalloffBase(CompoundFalloff):
 cdef class SinWaveFalloff(WaveFalloffBase):
     cdef float evaluate(self, float *dependencyResults):
         cdef float result = sin(2 * M_PI * dependencyResults[0] * self.frequency + self.offset)
-        return result * self.amplitude * 2.71827 ** -(self.damping * dependencyResults[0])
+        return result * 2.71827 ** -(self.damping * dependencyResults[0])
 
     cdef void evaluateList(self, float **dependencyResults, Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
@@ -73,7 +72,7 @@ cdef class SinWaveFalloff(WaveFalloffBase):
         cdef float result = 0
         for i in range(amount):
             result = sin(2 * M_PI * a[i] * self.frequency + self.offset)
-            target[i] = result * self.amplitude * 2.71827 ** -(self.damping * a[i])
+            target[i] = result * 2.71827 ** -(self.damping * a[i])
 
 cdef class SquareWaveFalloff(WaveFalloffBase):
     cdef float evaluate(self, float *dependencyResults):
@@ -82,7 +81,7 @@ cdef class SquareWaveFalloff(WaveFalloffBase):
             result = -1
         else:
             result = 1
-        return result * self.amplitude * 2.71827 ** -(self.damping * dependencyResults[0])
+        return result * 2.71827 ** -(self.damping * dependencyResults[0])
 
     cdef void evaluateList(self, float **dependencyResults, Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
@@ -94,13 +93,13 @@ cdef class SquareWaveFalloff(WaveFalloffBase):
                 result = -1
             else:
                 result = 1
-            target[i] = result * self.amplitude * 2.71827 ** -(self.damping * a[i])
+            target[i] = result * 2.71827 ** -(self.damping * a[i])
 
 cdef class TriangularWaveFalloff(WaveFalloffBase):
     cdef float evaluate(self, float *dependencyResults):
         cdef float result = asin(sin((2 * M_PI * dependencyResults[0] * self.frequency) + self.offset))
         result = (result / M_PI + 0.5) * 2 - 1
-        return result * self.amplitude * 2.71827 ** -(self.damping * dependencyResults[0])
+        return result * 2.71827 ** -(self.damping * dependencyResults[0])
 
     cdef void evaluateList(self, float **dependencyResults, Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
@@ -109,12 +108,12 @@ cdef class TriangularWaveFalloff(WaveFalloffBase):
         for i in range(amount):
             result = asin(sin((2 * M_PI * a[i] * self.frequency) + self.offset))
             result = (result / M_PI + 0.5) * 2 - 1
-            target[i] = result * self.amplitude * 2.71827 ** -(self.damping * a[i])
+            target[i] = result * 2.71827 ** -(self.damping * a[i])
 
 cdef class SawWaveFalloff(WaveFalloffBase):
     cdef float evaluate(self, float *dependencyResults):
         cdef float result = 2 / M_PI * atan(1 / tan(dependencyResults[0] * self.frequency * M_PI + self.offset))
-        return result * self.amplitude * 2.71827 ** -(self.damping * dependencyResults[0])
+        return result * 2.71827 ** -(self.damping * dependencyResults[0])
 
     cdef void evaluateList(self, float **dependencyResults, Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
@@ -122,4 +121,4 @@ cdef class SawWaveFalloff(WaveFalloffBase):
         cdef float result = 0
         for i in range(amount):
             result = 2 / M_PI * atan(1 / tan(a[i] * self.frequency * M_PI + self.offset))
-            target[i] = result * self.amplitude * 2.71827 ** -(self.damping * a[i])
+            target[i] = result * 2.71827 ** -(self.damping * a[i])
