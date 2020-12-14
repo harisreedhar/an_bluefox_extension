@@ -1,6 +1,13 @@
 import bpy
 import numpy as np
 
+def checkIter(object):
+    try:
+        iterator = iter(object)
+        return True
+    except:
+        return False
+
 def evaluateFormula(formula, count = 0, falloff = 0,
                           px = 0, py = 0, pz = 0,
                           rx = 0, ry = 0, rz = 0,
@@ -44,4 +51,12 @@ def evaluateFormula(formula, count = 0, falloff = 0,
     def copysign(x,y):return np.copysign(x,y)
     def dist(x,y):return np.linalg.norm(x-y)
 
-    return eval(formula)
+    evaluatedValue = eval(formula)
+
+    if not isinstance(evaluatedValue, (np.ndarray, np.generic)):
+        if not checkIter(evaluatedValue):
+            evaluatedValue = np.array([evaluatedValue] * count)
+        else:
+            evaluatedValue = np.array(evaluatedValue)
+
+    return evaluatedValue

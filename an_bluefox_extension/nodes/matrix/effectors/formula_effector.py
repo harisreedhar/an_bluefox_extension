@@ -87,17 +87,5 @@ class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
                         rx = rX, ry = rY, rz = rZ,
                             sx = sX, sy = sY, sz = sZ)
 
-            if not isinstance(array, (np.ndarray, np.generic)):
-                if not self.checkIter(array):
-                    array = np.array([array])
-                else:
-                    array = np.array(array)
             strengths = FloatList.fromNumpyArray(array.astype('f'))
             return strengths
-
-    def checkIter(self, object):
-        try:
-            iterator = iter(object)
-            return True
-        except:
-            return False
