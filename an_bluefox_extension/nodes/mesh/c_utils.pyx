@@ -1,6 +1,8 @@
+import cython
+
 from animation_nodes.data_structures cimport PolygonIndicesList
 
-from libc.math cimport sin, cos
+from libc.math cimport sin, cos, fabs
 
 from animation_nodes . math cimport (
      Quaternion, Euler3, Vector3, Matrix4,
@@ -15,6 +17,8 @@ from animation_nodes . data_structures cimport (
     VirtualDoubleList, VirtualFloatList, Mesh,
     Interpolation, EdgeIndicesList
 )
+
+from animation_nodes . nodes . number . c_utils import mapRange_DoubleList
 
 cdef c_polygonIndices_From_triArray(unsigned int [:, :] triArray):
     cdef int i
@@ -181,8 +185,8 @@ def bendDeform(Vector3DList points, FloatList strengths, float factor, str axis 
         c_bendDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
 
-# https://github.com/ScottishCyclops/tensionmap
-def findMeshTension(Mesh mesh1, Mesh mesh2, float multiplier):
+@cython.cdivision(True)
+def findMeshTension(Mesh mesh1, Mesh mesh2, float intensity, float influence):
     cdef EdgeIndicesList mesh1Edges = mesh1.edges
     cdef Vector3DList mesh1Vertices = mesh1.vertices
     cdef Vector3DList mesh2Vertices = mesh2.vertices
@@ -209,8 +213,12 @@ def findMeshTension(Mesh mesh1, Mesh mesh2, float multiplier):
         v2.y = mesh2Vertices.data[index1].y - mesh2Vertices.data[index2].y
         v2.z = mesh2Vertices.data[index1].z - mesh2Vertices.data[index2].z
 
-        factor = (lengthVec3(&v1) - lengthVec3(&v2)) * multiplier
+        factor = (lengthVec3(&v1) / lengthVec3(&v2)) / 2
+
+        influence = fabs(influence)
         weights.data[index1] -= factor
         weights.data[index2] -= factor
+        weights.data[index1] += influence
+        weights.data[index2] += influence
 
-    return weights
+    return mapRange_DoubleList(weights, True, 0, 1, -intensity, intensity)
