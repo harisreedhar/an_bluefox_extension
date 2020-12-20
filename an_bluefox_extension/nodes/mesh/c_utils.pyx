@@ -7,7 +7,7 @@ from libc.math cimport sin, cos, fabs
 from animation_nodes . math cimport (
      Quaternion, Euler3, Vector3, Matrix4,
      setTranslationRotationScaleMatrix, quaternionNormalize_InPlace,
-     lengthVec3
+     lengthVec3, distanceVec3
 )
 
 from animation_nodes . data_structures cimport (
@@ -17,8 +17,6 @@ from animation_nodes . data_structures cimport (
     VirtualDoubleList, VirtualFloatList, Mesh,
     Interpolation, EdgeIndicesList, ColorList
 )
-
-from animation_nodes . nodes . number . c_utils import mapRange_DoubleList
 
 cdef c_polygonIndices_From_triArray(unsigned int [:, :] triArray):
     cdef int i
@@ -188,36 +186,30 @@ def bendDeform(Vector3DList points, FloatList strengths, float factor, str axis 
 # https://blenderartists.org/t/revised-mesh-tension-add-on/1239091
 @cython.cdivision(True)
 def findMeshTension(Mesh mesh1, Mesh mesh2, float strength, float bias):
+    cdef Vector3 *vA1
+    cdef Vector3 *vA2
+    cdef Vector3 *vB1
+    cdef Vector3 *vB2
+    cdef Py_ssize_t i
     cdef EdgeIndicesList mesh1Edges = mesh1.edges
-    cdef Vector3DList mesh1Vertices = mesh1.vertices
-    cdef Vector3DList mesh2Vertices = mesh2.vertices
-
-    cdef Vector3 v1
-    cdef Vector3 v2
-    cdef Py_ssize_t i, index1, index2
     cdef Py_ssize_t edgeAmount = mesh1Edges.length
     cdef DoubleList edgeStretch = DoubleList(length = edgeAmount)
 
     for i in range(edgeAmount):
-        index1 = <Py_ssize_t>mesh1Edges.data[i].v1
-        index2 = <Py_ssize_t>mesh1Edges.data[i].v2
+        vA1 = mesh1.vertices.data + mesh1Edges.data[i].v1
+        vA2 = mesh1.vertices.data + mesh1Edges.data[i].v2
+        vB1 = mesh2.vertices.data + mesh1Edges.data[i].v1
+        vB2 = mesh2.vertices.data + mesh1Edges.data[i].v2
 
-        v1.x = mesh1Vertices.data[index1].x - mesh1Vertices.data[index2].x
-        v1.y = mesh1Vertices.data[index1].y - mesh1Vertices.data[index2].y
-        v1.z = mesh1Vertices.data[index1].z - mesh1Vertices.data[index2].z
-
-        v2.x = mesh2Vertices.data[index1].x - mesh2Vertices.data[index2].x
-        v2.y = mesh2Vertices.data[index1].y - mesh2Vertices.data[index2].y
-        v2.z = mesh2Vertices.data[index1].z - mesh2Vertices.data[index2].z
-
-        edgeStretch.data[i] = lengthVec3(&v2) / lengthVec3(&v1)
+        edgeStretch.data[i] = distanceVec3(vB1, vB2) / distanceVec3(vA1, vA2)
 
     cdef LongList neighboursAmounts, neighboursStarts, neighbours, neighbourEdges
     neighboursAmounts, neighboursStarts, neighbours, neighbourEdges = mesh1.getLinkedVertices()
 
-    cdef float factor, t
-    cdef Py_ssize_t vertAmount = mesh1Vertices.length
-    cdef Py_ssize_t j, k, start, end, amount, edgeIndex, edgesLength
+    cdef float factor, t, w
+    cdef long edgeIndex, start
+    cdef Py_ssize_t j, k, amount
+    cdef Py_ssize_t vertAmount = mesh1.vertices.length
     cdef DoubleList weights = DoubleList(length = vertAmount)
     cdef ColorList colors = ColorList(length = vertAmount)
     colors.fill((0,0,0,1))
@@ -226,18 +218,17 @@ def findMeshTension(Mesh mesh1, Mesh mesh2, float strength, float bias):
         factor = 0
         amount = neighboursAmounts.data[j]
         start = neighboursStarts.data[j]
-        end = start + amount
-        edgesLength = end - start
-        for k in range(edgesLength):
+        for k in range(amount):
             edgeIndex = neighbourEdges.data[start + k]
             factor += edgeStretch.data[edgeIndex]
-        factor /= edgesLength
+        factor /= amount
         t = (1 - factor) * strength
-        weights.data[j] = -t + bias
+        w = -t + bias
+        weights.data[j] = w
 
         if t <= bias:
-            colors.data[j].g = -t + bias
+            colors.data[j].g = w
         if t >= bias:
-            colors.data[j].r = t - bias
+            colors.data[j].r = -w
 
     return weights, colors
