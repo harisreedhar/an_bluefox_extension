@@ -12,10 +12,10 @@ from animation_nodes . math cimport (
 
 from animation_nodes . data_structures cimport (
     Vector3DList, DoubleList, FloatList, EulerList, Matrix4x4List,
-    QuaternionList, VirtualQuaternionList,
+    QuaternionList, VirtualQuaternionList, LongList, UIntegerList,
     VirtualVector3DList, VirtualEulerList, VirtualMatrix4x4List,
     VirtualDoubleList, VirtualFloatList, Mesh,
-    Interpolation, EdgeIndicesList
+    Interpolation, EdgeIndicesList, ColorList
 )
 
 from animation_nodes . nodes . number . c_utils import mapRange_DoubleList
@@ -185,21 +185,18 @@ def bendDeform(Vector3DList points, FloatList strengths, float factor, str axis 
         c_bendDeform(&points.data[i], strengths.data[i]*factor, axis)
     return points
 
+# https://blenderartists.org/t/revised-mesh-tension-add-on/1239091
 @cython.cdivision(True)
-def findMeshTension(Mesh mesh1, Mesh mesh2, float intensity, float influence):
+def findMeshTension(Mesh mesh1, Mesh mesh2, float strength, float bias):
     cdef EdgeIndicesList mesh1Edges = mesh1.edges
     cdef Vector3DList mesh1Vertices = mesh1.vertices
     cdef Vector3DList mesh2Vertices = mesh2.vertices
 
-    cdef Py_ssize_t edgeAmount = mesh1Edges.length
-    cdef Py_ssize_t i, index1, index2
-
     cdef Vector3 v1
     cdef Vector3 v2
-    cdef float factor
-
-    cdef DoubleList weights = DoubleList(length = mesh1Vertices.length)
-    weights.fill(0)
+    cdef Py_ssize_t i, index1, index2
+    cdef Py_ssize_t edgeAmount = mesh1Edges.length
+    cdef DoubleList edgeStretch = DoubleList(length = edgeAmount)
 
     for i in range(edgeAmount):
         index1 = <Py_ssize_t>mesh1Edges.data[i].v1
@@ -213,12 +210,34 @@ def findMeshTension(Mesh mesh1, Mesh mesh2, float intensity, float influence):
         v2.y = mesh2Vertices.data[index1].y - mesh2Vertices.data[index2].y
         v2.z = mesh2Vertices.data[index1].z - mesh2Vertices.data[index2].z
 
-        factor = (lengthVec3(&v1) / lengthVec3(&v2)) / 2
+        edgeStretch.data[i] = lengthVec3(&v2) / lengthVec3(&v1)
 
-        influence = fabs(influence)
-        weights.data[index1] -= factor
-        weights.data[index2] -= factor
-        weights.data[index1] += influence
-        weights.data[index2] += influence
+    cdef LongList neighboursAmounts, neighboursStarts, neighbours, neighbourEdges
+    neighboursAmounts, neighboursStarts, neighbours, neighbourEdges = mesh1.getLinkedVertices()
 
-    return mapRange_DoubleList(weights, True, 0, 1, -intensity, intensity)
+    cdef float factor, t
+    cdef Py_ssize_t vertAmount = mesh1Vertices.length
+    cdef Py_ssize_t j, k, start, end, amount, edgeIndex, edgesLength
+    cdef DoubleList weights = DoubleList(length = vertAmount)
+    cdef ColorList colors = ColorList(length = vertAmount)
+    colors.fill((0,0,0,1))
+
+    for j in range(vertAmount):
+        factor = 0
+        amount = neighboursAmounts.data[j]
+        start = neighboursStarts.data[j]
+        end = start + amount
+        edgesLength = end - start
+        for k in range(edgesLength):
+            edgeIndex = neighbourEdges.data[start + k]
+            factor += edgeStretch.data[edgeIndex]
+        factor /= edgesLength
+        t = (1 - factor) * strength
+        weights.data[j] = -t + bias
+
+        if t <= bias:
+            colors.data[j].g = -t + bias
+        if t >= bias:
+            colors.data[j].r = t - bias
+
+    return weights, colors
