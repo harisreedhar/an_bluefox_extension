@@ -28,7 +28,7 @@ class BF_SimpleDeformNode(bpy.types.Node, AnimationNode):
         items = axisItems, update = AnimationNode.refresh)
 
     def create(self):
-        self.newInput("Vector List", "Vertices", "vertices", dataIsModified = True)
+        self.newInput("Vector List", "Vertices", "verticesIn")
         self.newInput("Matrix", "Matrix", "matrix")
         self.newInput("Float", "Factor", "factor", value = 0)
         self.newInput("Falloff", "falloff", "falloff")
@@ -39,7 +39,8 @@ class BF_SimpleDeformNode(bpy.types.Node, AnimationNode):
         col = layout.column()
         col.row().prop(self, "axis", expand = True)
 
-    def execute(self, vertices, matrix, factor, falloff):
+    def execute(self, verticesIn, matrix, factor, falloff):
+        vertices = verticesIn.copy()
         if len(vertices) == 0:
             return vertices
 
