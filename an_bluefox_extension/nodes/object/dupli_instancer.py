@@ -11,7 +11,7 @@ from animation_nodes . data_structures import (Mesh, Vector3DList, EdgeIndicesLi
 dupliModeItems = [
     ("VERTS", "Vertices", "Instance on vertices", "", 0),
     ("FACES", "Faces", "Instance on Faces", "", 1),
-    ("COLLECTION", "Collection", "Instance a collection", "", 2)
+    #("COLLECTION", "Collection", "Instance a collection", "", 2)
 ]
 
 lastChild = {}
@@ -25,7 +25,7 @@ class BF_DupliInstancerNode(bpy.types.Node, AnimationNode):
     useDisplay : BoolProperty(name = "Display Instancer", default = True, update = propertyChanged)
     useRender : BoolProperty(name = "Render Instancer", default = True, update = propertyChanged)
 
-    mode : EnumProperty(name = "Mode", default = "VERTS",
+    mode : EnumProperty(name = "Mode", default = "FACES",
         items = dupliModeItems, update = AnimationNode.refresh)
 
     def create(self):
