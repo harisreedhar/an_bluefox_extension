@@ -98,7 +98,7 @@ class BF_InheritanceEffexNode(bpy.types.Node, AnimationNode, EffexBase, SplineEv
             self.newOutput("Float List", "Values", "effexValues", hide = True)
 
     def draw(self, layout):
-        layout.prop(self, "selectMode", text = "")
+        #layout.prop(self, "selectMode", text = "")
         if self.dataMode != 'VECTOR_VECTOR':
             if self.selectMode == "SPLINE":
                 row = layout.row(align = True)
