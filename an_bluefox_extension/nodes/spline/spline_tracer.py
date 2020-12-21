@@ -24,7 +24,7 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode, SplineEvaluationBase):
     def create(self):
         self.newInput(VectorizedSocket("Vector", "useVectorList",
             ("Point", "point"), ("Points", "point")))
-        self.newInput("Boolean", "Trace Condition", "traceCondition")
+        self.newInput("Boolean", "Trace Condition", "traceCondition", hide = True)
         self.newInput("Integer", "Reset Frame", "resetframe", value = 1)
         self.newInput("Integer", "Start Frame", "start", value = 1)
         self.newInput("Integer", "End Frame", "end", value = 250)
