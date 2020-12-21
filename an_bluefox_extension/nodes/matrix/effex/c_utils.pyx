@@ -24,7 +24,7 @@ from animation_nodes . data_structures cimport (
     VirtualDoubleList, VirtualFloatList
 )
 
-################################################### Inheritance effector code ###################################################
+################################################### Inheritance effex code ###################################################
 
 def inheritPointsOverSpline(Vector3DList vA, Vector3DList vB, Vector3DList splinePoints, FloatList influences):
 
@@ -187,9 +187,7 @@ def matrixScaleLerp(Matrix4x4List matrices, VirtualVector3DList scales, FloatLis
         setScaleMatrix(result.data + i, &target)
     return result
 
-################################################# Inheritance effector code end #################################################
-
-################################################### Inheritance effector code ###################################################
+################################################# Inheritance effex code end #################################################
 
 cdef getDirection(Vector3DList vectors, Vector3 *target, Py_ssize_t negFlag = 1):
     cdef Py_ssize_t i

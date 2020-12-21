@@ -28,13 +28,13 @@ mixTypeItems = [
     ("NONE", "None", "", "NONE", 4)
 ]
 
-class EffectorBase:
+class EffexBase:
     def checkedPropertiesChanged(self, context):
             self.updateSocketVisibility()
             executionCodeChanged()
 
     mixType: EnumProperty(name = "Mix Type", items = mixTypeItems,
-        description = "falloff and effector mix method",
+        description = "falloff and effex mix method",
         default = "MULTIPLY", update = AnimationNode.refresh)
 
     useTranslation: BoolProperty(name = "Use Translation", default = False,
@@ -108,8 +108,8 @@ class EffectorBase:
         scales = extractMatrixScales(matrices)
         return translations, rotations, scales
 
-    def mixEffectorAndFalloff(self, effectorStrengths, falloff, interpolation, outMin = 0, outMax = 1):
-        custom = CustomFalloff(effectorStrengths, 0)
+    def mixEffexAndFalloff(self, effexStrengths, falloff, interpolation, outMin = 0, outMax = 1):
+        custom = CustomFalloff(effexStrengths, 0)
         newFalloff = custom
         if self.mixType != "NONE":
             newFalloff = MixFalloffs([falloff, custom], self.mixType, default = 1)

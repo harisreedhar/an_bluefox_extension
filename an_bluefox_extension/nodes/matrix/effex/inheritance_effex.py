@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import *
 from mathutils import Matrix
-from . effector_base import EffectorBase
+from . effex_base import EffexBase
 from animation_nodes . events import propertyChanged
 from animation_nodes . algorithms.rotations import directionsToMatrices
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
@@ -37,9 +37,9 @@ dataModeItems = [
     ("VECTOR_VECTOR", "Vectors & Vectors", "", "", 2)
 ]
 
-class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, SplineEvaluationBase):
-    bl_idname = "an_bf_InheritanceEffector"
-    bl_label = "Inheritance Effector"
+class BF_InheritanceEffexNode(bpy.types.Node, AnimationNode, EffexBase, SplineEvaluationBase):
+    bl_idname = "an_bf_InheritanceEffexNode"
+    bl_label = "Inheritance Effex"
     bl_width_default = 200
     errorHandlingType = "EXCEPTION"
 
@@ -79,7 +79,7 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
                 self.createMinMaxInterpolationInputs()
 
             self.newOutput("Matrix List", "Matrices", "matrices")
-            self.newOutput("Float List", "Values", "effectorValues", hide = True)
+            self.newOutput("Float List", "Values", "effexValues", hide = True)
             if self.dataMode == 'MATRIX_COMPONENTS':
                 self.updateSocketVisibility()
 
@@ -95,7 +95,7 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
             self.createMinMaxInterpolationInputs()
 
             self.newOutput("Vector List", "Vectors", "vectors")
-            self.newOutput("Float List", "Values", "effectorValues", hide = True)
+            self.newOutput("Float List", "Values", "effexValues", hide = True)
 
     def draw(self, layout):
         layout.prop(self, "selectMode", text = "")
@@ -123,8 +123,8 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
 
     def getExecutionCode(self, required):
         if self.dataMode in ['MATRIX_COMPONENTS', 'MATRIX_MATRIX']:
-            if "matrices" in required or "effectorValues" in required:
-                yield "effectorValues = AN.data_structures.DoubleList()"
+            if "matrices" in required or "effexValues" in required:
+                yield "effexValues = AN.data_structures.DoubleList()"
                 yield "newfalloff = self.remapFalloff(falloff, interpolation, outMin=minValue, outMax=maxValue)"
                 yield "influences = self.getInfluences(newfalloff, matrices)"
                 if self.selectMode == "SPLINE":
@@ -137,12 +137,12 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
                         yield "matrices = self.executeLinear_MAT_COMP(matrices, translation, rotation, scale, influences)"
                     if self.dataMode == 'MATRIX_MATRIX':
                         yield "matrices = self.executeLinear_MAT_MAT(matrices, matrices2, influences)"
-                if "effectorValues" in required:
-                        yield "effectorValues = AN.data_structures.DoubleList.fromValues(influences)"
+                if "effexValues" in required:
+                        yield "effexValues = AN.data_structures.DoubleList.fromValues(influences)"
 
         if self.dataMode == 'VECTOR_VECTOR':
-            if "vectors" in required or "effectorValues" in required:
-                yield "effectorValues = AN.data_structures.DoubleList()"
+            if "vectors" in required or "effexValues" in required:
+                yield "effexValues = AN.data_structures.DoubleList()"
                 yield "newfalloff = self.remapFalloff(falloff, interpolation, outMin=minValue, outMax=maxValue)"
                 yield "evaluator = newfalloff.getEvaluator('LOCATION')"
                 yield "influences = evaluator.evaluateList(vectors1)"
@@ -150,8 +150,8 @@ class BF_InheritanceEffectorNode(bpy.types.Node, AnimationNode, EffectorBase, Sp
                     yield "vectors = self.executeSpline_VEC_VEC(vectors1, vectors2, spline, samples, influences)"
                 else:
                     yield "vectors = self.executeLinear_VEC_VEC(vectors1, vectors2, influences)"
-                if "effectorValues" in required:
-                        yield "effectorValues = AN.data_structures.DoubleList.fromValues(influences)"
+                if "effexValues" in required:
+                        yield "effexValues = AN.data_structures.DoubleList.fromValues(influences)"
 
     def executeLinear_MAT_COMP(self, matrices, translation, rotation, scale, influences):
         if not self.useTranslationList: translation = Vector3DList.fromValues([translation])

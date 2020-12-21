@@ -50,11 +50,11 @@ class BF_MatrixMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text = "Effectors")
-        insertNode(layout, "an_bf_FormulaEffector", "Formula Effector")
-        insertNode(layout, "an_bf_InheritanceEffector", "Inheritance Effector")
-        insertNode(layout, "an_bf_StepEffector", "Step Effector")
-        insertNode(layout, "an_bf_TimeEffector", "Time Effector")
+        layout.label(text = "Effex Nodes")
+        insertNode(layout, "an_bf_FormulaEffexNode", "Formula Effex")
+        insertNode(layout, "an_bf_InheritanceEffexNode", "Inheritance Effex")
+        insertNode(layout, "an_bf_StepEffexNode", "Step Effex")
+        insertNode(layout, "an_bf_TimeEffexNode", "Time Effex")
         layout.separator()
 
 class BF_MeshMenu(bpy.types.Menu):

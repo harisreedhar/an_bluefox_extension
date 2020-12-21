@@ -1,13 +1,13 @@
 import bpy
 import numpy as np
 from bpy.props import *
-from . effector_base import EffectorBase
+from . effex_base import EffexBase
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 from animation_nodes . data_structures import FloatList, VirtualDoubleList, VirtualBooleanList
 
-class BF_TimeEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
-    bl_idname = "an_bf_TimeEffector"
-    bl_label = "Time Effector"
+class BF_TimeEffexNode(bpy.types.Node, AnimationNode, EffexBase):
+    bl_idname = "an_bf_TimeEffexNode"
+    bl_label = "Time Effex"
     bl_width_default = 200
     errorHandlingType = "EXCEPTION"
 
@@ -29,7 +29,7 @@ class BF_TimeEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
             ("Speeds", "speeds")))
         self.createBasicInputs()
         self.newOutput("Matrix List", "Matrices", "matrices")
-        self.newOutput("Float List", "Values", "effectorValues", hide = True)
+        self.newOutput("Float List", "Values", "effexValues", hide = True)
         self.updateSocketVisibility()
 
     def draw(self, layout):
@@ -39,15 +39,15 @@ class BF_TimeEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
         self.drawFalloffMixType(layout)
 
     def getExecutionCode(self, required):
-        if "matrices" in required or "effectorValues" in required:
-            yield "effectorValues = AN.data_structures.DoubleList()"
+        if "matrices" in required or "effexValues" in required:
+            yield "effexValues = AN.data_structures.DoubleList()"
             if any([self.useTranslation, self.useRotation, self.useScale]):
                 yield "efStrengths = self.getTimeStrengths(time, infinites, durations, speeds, len(matrices))"
-                yield "mixedFalloff = self.mixEffectorAndFalloff(efStrengths, falloff, interpolation, outMin=minValue, outMax=maxValue)"
+                yield "mixedFalloff = self.mixEffexAndFalloff(efStrengths, falloff, interpolation, outMin=minValue, outMax=maxValue)"
                 yield "influences = self.getInfluences(mixedFalloff, matrices)"
                 yield "matrices = self.offsetMatrixList(matrices, influences, translation, rotation, scale)"
-                if "effectorValues" in required:
-                    yield "effectorValues = AN.data_structures.DoubleList.fromValues(influences)"
+                if "effexValues" in required:
+                    yield "effexValues = AN.data_structures.DoubleList.fromValues(influences)"
 
     def getTimeStrengths(self, time, infinites, durations, speeds, amount):
         amount = max(1, amount)

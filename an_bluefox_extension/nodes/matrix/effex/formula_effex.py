@@ -1,15 +1,15 @@
 import bpy
 import numpy as np
 from bpy.props import *
-from . effector_base import EffectorBase
+from . effex_base import EffexBase
 from .... utils . formula import evaluateFormula
 from animation_nodes . base_types import AnimationNode
 from animation_nodes . nodes.rotation.c_utils import eulersToVectors
 from animation_nodes . data_structures import Matrix4x4List, Vector3DList, FloatList
 
-class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
-    bl_idname = "an_bf_FormulaEffector"
-    bl_label = "Formula Effector"
+class BF_FormulaEffexNode(bpy.types.Node, AnimationNode, EffexBase):
+    bl_idname = "an_bf_FormulaEffexNode"
+    bl_label = "Formula Effex"
     bl_width_default = 200
     errorHandlingType = "EXCEPTION"
 
@@ -28,7 +28,7 @@ class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
         self.newInput("Matrix List", "Matrices", "matrices", dataIsModified = True)
         self.createBasicInputs()
         self.newOutput("Matrix List", "Matrices", "matrices")
-        self.newOutput("Float List", "Values", "effectorValues", hide = True)
+        self.newOutput("Float List", "Values", "effexValues", hide = True)
         self.updateSocketVisibility()
 
     def draw(self, layout):
@@ -47,19 +47,19 @@ class BF_FormulaEffectorNode(bpy.types.Node, AnimationNode, EffectorBase):
         layout.label(text = "falloff")
 
     def getExecutionCode(self, required):
-        if "matrices" in required or "effectorValues" in required:
-            yield "effectorValues = AN.data_structures.DoubleList()"
+        if "matrices" in required or "effexValues" in required:
+            yield "effexValues = AN.data_structures.DoubleList()"
             if any([self.useTranslation, self.useRotation, self.useScale]):
                 yield "efStrengths = AN.data_structures.FloatList()"
                 yield "try:"
                 yield "    efStrengths = self.getFormulaStrengths(self.formula, matrices, falloff)"
-                yield "    mixedFalloff = self.mixEffectorAndFalloff(efStrengths, falloff, interpolation, outMin=minValue, outMax=maxValue)"
+                yield "    mixedFalloff = self.mixEffexAndFalloff(efStrengths, falloff, interpolation, outMin=minValue, outMax=maxValue)"
                 yield "    influences = self.getInfluences(mixedFalloff, matrices)"
                 yield "    matrices = self.offsetMatrixList(matrices, influences, translation, rotation, scale)"
-                if "effectorValues" in required:
-                    yield "    effectorValues = AN.data_structures.DoubleList.fromValues(influences)"
+                if "effexValues" in required:
+                    yield "    effexValues = AN.data_structures.DoubleList.fromValues(influences)"
                 yield "except Exception as e:"
-                yield "    print('Formula Effector Error:', str(e))"
+                yield "    print('Formula Effex Error:', str(e))"
                 yield "    self.setErrorMessage('Formula error!')"
 
     def getFormulaStrengths(self, formula, matrices, falloff):
