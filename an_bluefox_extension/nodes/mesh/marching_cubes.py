@@ -43,6 +43,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         else:
             self.newInput("Generic", "Field", "field")
         self.newInput("Integer", "Samples","samples", minValue = 3, value = 10)
+        self.newInput("Float", "Scale Grid","scaleGrid", value = 1)
         self.newInput("Matrix", "Transform Grid","transform")
         self.newInput(VectorizedSocket("Float", "useThresholdList",
             ("Threshold", "threshold"),("Thresholds", "threshold")), value = 0.3, hide = True)
@@ -68,7 +69,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         yield "values = ds.DoubleList()"
         if "mesh" in required:
             yield "try:"
-            yield "    boundingBox = ds.Vector3DList.fromValues(self.unityCube)"
+            yield "    boundingBox = ds.Vector3DList.fromNumpyArray(self.unityCube.ravel() * scaleGrid)"
             yield "    boundingBox.transform(transform)"
             yield "    mesh, grid, norm, val = self.generateMeshFromField(boundingBox, samples, field, threshold)"
             if "gridPoints" in required:
@@ -93,7 +94,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         return self.createMesh(vertices, faces), grid, normalArr, valueArr
 
     def createGrid(self, boundingBox, samples):
-        vs = np.array(boundingBox)
+        vs = boundingBox.asNumpyArray().reshape(-1,3)
         minBound = vs.min(axis=0)
         maxBound = vs.max(axis=0)
         xRange = np.linspace(minBound[0], maxBound[0], num=samples)
@@ -126,7 +127,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         try: return falloff.getEvaluator("LOCATION")
         except: self.raiseErrorMessage("This falloff cannot be evaluated for vectors")
 
-    unityCube = [(-1.0000, -1.0000, -1.0000),(-1.0000, -1.0000, 1.0000),
+    unityCube = np.array([(-1.0000, -1.0000, -1.0000),(-1.0000, -1.0000, 1.0000),
                     (-1.0000, 1.0000, -1.0000),(-1.0000, 1.0000, 1.0000),
                     (1.0000, -1.0000, -1.0000),(1.0000, -1.0000, 1.0000),
-                    (1.0000, 1.0000, -1.0000),(1.0000, 1.0000, 1.0000)]
+                    (1.0000, 1.0000, -1.0000),(1.0000, 1.0000, 1.0000)], dtype = 'float32')
