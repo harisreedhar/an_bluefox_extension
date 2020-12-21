@@ -27,7 +27,7 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
     collisionShape: EnumProperty(name = "Collision Shape", default = "CONVEX_HULL",
         items = collisionShapeItems, update = AnimationNode.refresh)
     enableShape: BoolProperty(name = "Is Used", default = False, update = AnimationNode.refresh)
-    enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = True, update = AnimationNode.refresh)
+    enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = False, update = AnimationNode.refresh)
 
     def create(self):
         self.newInput(VectorizedSocket("Object", "useObjectList",
