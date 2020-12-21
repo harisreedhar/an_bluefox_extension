@@ -31,7 +31,7 @@ class BF_SimpleDeformNode(bpy.types.Node, AnimationNode):
         self.newInput("Vector List", "Vertices", "verticesIn")
         self.newInput("Matrix", "Matrix", "matrix")
         self.newInput("Float", "Factor", "factor", value = 0)
-        self.newInput("Falloff", "falloff", "falloff")
+        self.newInput("Falloff", "falloff", "falloff", hide = True)
         self.newOutput("Vector List", "Vertices", "vertices")
 
     def draw(self, layout):
