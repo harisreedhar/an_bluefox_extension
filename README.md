@@ -1,5 +1,7 @@
 # an_bluefox_extension
  Extension for animation nodes addon for blender.
+ 
+ [blenderartists thread](https://blenderartists.org/t/bluefox-extension-for-animation-nodes/1273067)
 
  ### Requirements
    - Animation nodes
