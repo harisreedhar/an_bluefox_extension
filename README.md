@@ -4,8 +4,8 @@
  [blenderartists thread](https://blenderartists.org/t/bluefox-extension-for-animation-nodes/1273067)
 
  ### Requirements
-   - Animation nodes 2.2 or above
-   - Blender 2.90 or above
+   - [Animation nodes 2.2 or above](https://animation-nodes.com/)
+   - [Blender 2.90 or above](https://www.blender.org/download/)
     
  ### How to install?
    - Download the file according to your Operating System
