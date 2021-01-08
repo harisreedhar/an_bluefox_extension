@@ -8,8 +8,8 @@ from animation_nodes . utils.blender_ui import executeInAreaType, iterActiveSpac
 
 object_in = None
 
-class SeparateLooseObjectsNode(bpy.types.Node, AnimationNode):
-    bl_idname = "an_SeparateLooseObjectsNode"
+class BF_SeparateLooseObjectsNode(bpy.types.Node, AnimationNode):
+    bl_idname = "an_bf_SeparateLooseObjectsNode"
     bl_label = "Separate Loose Objects"
     bl_width_default = 150
     options = {"NOT_IN_SUBPROGRAM"}
