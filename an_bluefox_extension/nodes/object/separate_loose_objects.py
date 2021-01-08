@@ -28,9 +28,6 @@ class BF_SeparateLooseObjectsNode(bpy.types.Node, AnimationNode):
         global object_in
         object_in = object
 
-        if self.inputs[0].isUnlinked:
-            self.delete()
-
         if object_in is None:
             return []
 
