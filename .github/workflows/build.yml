@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - master
+      - experimental
   pull_request:
     branches:
       - master
+      - experimental
 
 jobs:
   build:
