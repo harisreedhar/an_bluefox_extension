@@ -22,27 +22,28 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     smoothAngle: FloatProperty(default = 45, update = AnimationNode.refresh)
     offset: FloatProperty(update = AnimationNode.refresh)
     nCloseFinds: IntProperty(default = 25, update = AnimationNode.refresh)
+    sourceObject: PointerProperty(type = bpy.types.Object, description = "Source Object",
+                             update = AnimationNode.refresh)
     datas = {}
 
     def create(self):
-        self.newInput("Object", "Object", "object",
-                      defaultDrawType="PROPERTY_ONLY")
         self.newInput("Vector List", "Source Points", "points")
         self.newInput("Scene", "Scene", "scene", hide = True)
-
         self.newOutput("Object List", "Objects", "objects")
 
     def draw(self, layout):
-        row = layout.row(align = True)
-        self.invokeFunction(row, "invokeFractureFunction",
+        col = layout.column()
+        col.scale_y = 1.5
+        self.invokeFunction(col, "invokeFractureFunction",
                             text="Update",
                             description="fracture object into multiple objects",
                             icon="FILE_REFRESH")
-
         col = layout.column(align = True)
         row = col.row(align = True)
-        row.prop(self, "fillInner", text = "Inside Fill", toggle = True)
-        row.prop(self, "shadeSmooth", text = "Shade Smooth", toggle = True)
+        row.prop(self, "sourceObject", text = "")
+        row1 = col.row(align = True)
+        row1.prop(self, "fillInner", text = "Inside Fill", toggle = True)
+        row1.prop(self, "shadeSmooth", text = "Shade Smooth", toggle = True)
         if self.shadeSmooth:
             row2 = col.row(align = True)
             row2.prop(self, "smoothAngle", text = "Smooth Angle")
@@ -51,33 +52,33 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         row4 = col.row(align = True)
         row4.prop(self, "nCloseFinds", text = "Close Finds No.")
 
-    def execute(self, object, points, scene):
-        self.datas["object"] = object
+    def execute(self, points, scene):
         self.datas["points"] = points
         self.datas["scene"] = scene
-        if None in (object, scene):
+        if None in [scene, self.sourceObject]:
             return []
         collection = getCollection(scene, self.getSubCollectionName())
         return list(getattr(collection, "objects", []))
 
     def invokeFractureFunction(self):
-        object = self.datas.get("object")
-        points = self.datas.get("points")
-        scene = self.datas.get("scene")
-        parameters = (points, self.fillInner, self.offset, self.nCloseFinds)
-        fractureObjects(object, scene, self.getSubCollectionName(), parameters,
-                        self.shadeSmooth, self.smoothAngle)
-        self.refresh()
+        object = self.sourceObject
+        if object is not None:
+            points = self.datas.get("points")
+            scene = self.datas.get("scene")
+            parameters = (points, self.fillInner, self.offset, self.nCloseFinds)
+            fractureObjects(object, scene, self.getSubCollectionName(), parameters,
+                            self.shadeSmooth, self.smoothAngle)
+            self.refresh()
+            return True
 
     def getSubCollectionName(self):
-        return "Fractured_Objects" + self.identifier
+        return "Fracture_Collection" + self.identifier
 
     def delete(self):
         subCollection = getCollection(self.datas.get("scene"), self.getSubCollectionName())
         if subCollection:
             removeObjectsFromCollection(subCollection)
             bpy.data.collections.remove(subCollection)
-
 
 def fractureObjects(object, scene, name, parameters, smooth, angle):
     try:
@@ -143,7 +144,6 @@ def bmeshListToObjects(bmList, fractureName, subCollection):
         name = fractureName+str(i).zfill(3)
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
-        #me.calc_normals()
         ob = bpy.data.objects.new(name, me)
         subCollection.objects.link(ob)
         objectList.append(ob)
