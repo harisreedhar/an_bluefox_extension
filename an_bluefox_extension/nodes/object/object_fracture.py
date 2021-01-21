@@ -50,7 +50,7 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         row3 = col.row(align = True)
         row3.prop(self, "offset", text = "Offset")
         row4 = col.row(align = True)
-        row4.prop(self, "nCloseFinds", text = "Close Finds No.")
+        row4.prop(self, "nCloseFinds", text = "Quality")
 
     def execute(self, points, scene):
         self.datas["points"] = points
