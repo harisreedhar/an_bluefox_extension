@@ -1,8 +1,8 @@
 import bpy
 from bpy.props import *
 from animation_nodes . events import propertyChanged
+from animation_nodes . data_structures import PolySpline
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
-from animation_nodes . data_structures import Vector3DList, PolySpline, VirtualDoubleList
 
 class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_bf_SplineTracerNode"
@@ -41,6 +41,7 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
             ("Min Distance", "minDistance", dict(value = 0.1)),
             ("Min Distances", "minDistance")))
 
+        self.newInput("Boolean", "Full Reset", "reset", value = False, hide = True)
         self.newInput("Scene", "Scene", "scene", hide = True)
 
         listCollection = ["useVectorList", "useStartFrameList", "useEndFrameList",
@@ -49,7 +50,7 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
         self.newOutput(VectorizedSocket("Spline", listCollection,
             ("Spline", "spline"), ("Splines", "spline")))
 
-    def execute(self, point, startFrame, endFrame, radius, tilt, minDistance, scene):
+    def execute(self, point, startFrame, endFrame, radius, tilt, minDistance, reset, scene):
         self.executionIndex += 1
         if scene is None:
             return PolySpline()
@@ -57,9 +58,12 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
         sceneStart = scene.frame_start
         currentFrame = scene.frame_current
         identifier = self.identifier + str(self.executionIndex)
-        spline = self.executionCache.get(identifier)
 
-        if currentFrame in [startFrame, sceneStart] or spline is None:
+        if (currentFrame == sceneStart) or reset:
+            self.resetExecutionCache()
+
+        spline = self.executionCache.get(identifier)
+        if spline is None or (currentFrame == startFrame):
             self.executionCache[identifier] = PolySpline()
             return PolySpline()
 
@@ -74,3 +78,8 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
             pointDistance = (spline.points[-1] - point).length
             return pointDistance >= minDistance
         return True
+
+    def resetExecutionCache(self):
+        for key in self.executionCache.keys():
+            if key.startswith(self.identifier):
+                self.executionCache[key] = None
