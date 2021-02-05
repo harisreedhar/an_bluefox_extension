@@ -66,6 +66,7 @@ class BF_MeshMenu(bpy.types.Menu):
         insertNode(layout, "an_bf_FindMeshTensionNode", "Find Mesh Tension")
         insertNode(layout, "an_bf_MarchingCubesNode", "Marching Cubes")
         insertNode(layout, "an_bf_SimpleDeformNode", "Simple Deform")
+        insertNode(layout, "an_bf_VoronoiFractureNode", "Voronoi Fracture")
 
 class BF_ObjectMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Object_menu"
