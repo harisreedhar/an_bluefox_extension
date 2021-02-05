@@ -143,6 +143,9 @@ class BF_SverchokInterfaceNode(bpy.types.Node, AnimationNode):
         if textObject is not None:
             bpy.data.texts.remove(textObject)
 
+    def duplicate(self, sourceNode):
+        self.textBlock = None
+
     def setValue(self, value):
         dataByIdentifier[self.identifier] = value
 
