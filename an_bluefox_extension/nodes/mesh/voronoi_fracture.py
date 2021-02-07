@@ -3,6 +3,7 @@ import bmesh
 import mathutils
 from bpy.props import *
 from animation_nodes . base_types import AnimationNode
+from ... utils.cache_node import cacheHelper, prepareCache
 from animation_nodes . nodes . mesh . bmesh_create import getBMeshFromMesh
 from animation_nodes . data_structures import (
     Vector3DList, EdgeIndicesList,
@@ -10,20 +11,13 @@ from animation_nodes . data_structures import (
     Mesh, Matrix4x4List
 )
 
-updateTypeItems = [("REALTIME", "Real Time", "", "NONE", 0),
-                   ("CACHED", "Cached", "", "NONE", 1)]
-
-class BF_VoronoiFractureNode(bpy.types.Node, AnimationNode):
+class BF_VoronoiFractureNode(bpy.types.Node, AnimationNode, cacheHelper):
     bl_idname = "an_bf_VoronoiFractureNode"
     bl_label = "Voronoi Fracture"
     bl_width_default = 160
 
     searchAmount: IntProperty(description = "Amount of nearest points for KD-Tree evaluation",
                          default = 50, update = AnimationNode.refresh)
-    updateType: EnumProperty(items = updateTypeItems, update = AnimationNode.refresh, default = "REALTIME")
-
-    executionIndex = 0
-    executionCache = {}
 
     def create(self):
         self.newInput("Mesh", "Mesh", "source")
@@ -34,36 +28,22 @@ class BF_VoronoiFractureNode(bpy.types.Node, AnimationNode):
         self.newOutput("Matrix List", "Matrices", "matrices")
 
     def draw(self, layout):
-        col = layout.column()
-        col.scale_y = 1.5
-        if self.updateType == "CACHED":
-            self.invokeFunction(col, "resetVoronoiCache",
-                                text="Update",
-                                description="Update cache",
-                                icon="FILE_REFRESH")
-        col = layout.column(align = True)
-        row = col.row(align = True)
-        row.prop(self, "updateType", expand = True)
-        row1 = col.row(align = True)
-        row1.prop(self, "searchAmount", text = "Search Amount")
+        row, col = self.drawCacheItems(layout, "resetCache")
+        col.prop(self, "searchAmount", text = "Search Amount")
 
+    @prepareCache
     def execute(self, source, points, shellOnly, offset):
-        self.executionIndex += 1
-        identifier = self.identifier + str(self.executionIndex)
-        cachedValue = self.executionCache.get(identifier)
-
+        print(self.getCacheIdentifier())
+        cachedValue = self.getCacheValue()
         if self.updateType == "REALTIME" or cachedValue is None:
-            result = meshVoronoiFracture(source, points, shellOnly, offset, self.searchAmount)
-            self.executionCache[identifier] = result
-            return result[0], result[1]
+            meshes, matrices = meshVoronoiFracture(source, points, shellOnly, offset, self.searchAmount)
+            self.setCacheValue((meshes, matrices))
+            return meshes, matrices
 
         return cachedValue[0], cachedValue[1].copy()
 
-    def resetVoronoiCache(self):
-        for key in self.executionCache.keys():
-            if key.startswith(self.identifier):
-                self.executionCache[key] = None
-        self.refresh()
+    def resetCache(self):
+        self.setCacheToNone(self.identifier)
 
 # Reference: https://github.com/nortikin/sverchok/blob/master/node_scripts/SNLite_templates/demo/voronoi_3d.py
 def meshVoronoiFracture(mesh, points, shellOnly, offset, amount):
@@ -105,7 +85,7 @@ def meshVoronoiFracture(mesh, points, shellOnly, offset, amount):
             matrixList.append(identityMatrix.Translation(meanCenter))
             bMesh.free()
 
-    return [meshList, matrixList]
+    return (meshList, matrixList)
 
 def getMeshFromBMesh(bMesh):
     try:
