@@ -35,7 +35,7 @@ class cacheHelper(cacheBase):
     updateType: EnumProperty(items = updateTypeItems, default = "REALTIME",
                              update = AnimationNode.refresh)
 
-    def drawCacheItems(self, layout, functionName):
+    def drawInvokeUpdate(self, layout, functionName):
         col = layout.column()
         col.scale_y = 1.5
         if self.updateType == "CACHED":
@@ -43,10 +43,9 @@ class cacheHelper(cacheBase):
                                 text="Update",
                                 description="Update cache",
                                 icon="FILE_REFRESH")
-        col = layout.column(align = True)
-        row = col.row(align = True)
-        row.prop(self, "updateType", expand = True)
-        return row, col
+
+    def drawUpdateType(self, layout):
+        layout.prop(self, "updateType", expand = True)
 
 def prepareCache(function):
     def wrapper(*args):

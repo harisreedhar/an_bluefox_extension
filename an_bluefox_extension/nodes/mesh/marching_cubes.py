@@ -60,8 +60,11 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode, cacheHelper):
         socket.isUsed = False
 
     def draw(self, layout):
-        row, col = self.drawCacheItems(layout, "resetCache")
+        self.drawInvokeUpdate(layout, "resetCache")
         layout.prop(self, "fieldType", text = "")
+
+    def drawAdvanced(self, layout):
+        self.drawUpdateType(layout)
 
     def getExecutionCode(self, required):
         yield "ds = AN.data_structures"

@@ -14,9 +14,9 @@ from animation_nodes . data_structures import (
 class BF_VoronoiFractureNode(bpy.types.Node, AnimationNode, cacheHelper):
     bl_idname = "an_bf_VoronoiFractureNode"
     bl_label = "Voronoi Fracture"
-    bl_width_default = 160
+    bl_width_default = 150
 
-    searchAmount: IntProperty(description = "Amount of nearest points for KD-Tree evaluation",
+    searchAmount: IntProperty(description = "Amount of nearest points for KD-Tree evaluation.",
                          default = 50, update = AnimationNode.refresh)
 
     def create(self):
@@ -28,12 +28,14 @@ class BF_VoronoiFractureNode(bpy.types.Node, AnimationNode, cacheHelper):
         self.newOutput("Matrix List", "Matrices", "matrices")
 
     def draw(self, layout):
-        row, col = self.drawCacheItems(layout, "resetCache")
-        col.prop(self, "searchAmount", text = "Search Amount")
+        self.drawInvokeUpdate(layout, "resetCache")
+        layout.prop(self, "searchAmount", text = "Search Amount")
+
+    def drawAdvanced(self, layout):
+        self.drawUpdateType(layout)
 
     @prepareCache
     def execute(self, source, points, shellOnly, offset):
-        print(self.getCacheIdentifier())
         cachedValue = self.getCacheValue()
         if self.updateType == "REALTIME" or cachedValue is None:
             meshes, matrices = meshVoronoiFracture(source, points, shellOnly, offset, self.searchAmount)
