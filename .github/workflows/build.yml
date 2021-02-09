@@ -43,7 +43,7 @@ jobs:
       - name: Extract Headers
         run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Include External libraries  
-        run: pip install --target=./an_bluefox_extension/libs/external_libs scipy
+        run: pip install-option="--no-cython-compile" --target=./an_bluefox_extension/libs/external_libs scipy
       - name: Setup Development Enviroment
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
