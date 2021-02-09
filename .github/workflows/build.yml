@@ -42,16 +42,6 @@ jobs:
           file: animation_nodes_headers.zip
       - name: Extract Headers
         run: python -m zipfile -e animation_nodes_headers.zip ./
-      - name: Include External libraries  
-        run: pip install --target=./an_bluefox_extension/libs/external_libs scipy
-      - name: Remove example files from external libs
-        uses: JesseTG/rm@v1.0.2
-        with:
-          path: ./an_bluefox_extension/libs/external_libs/numpy/core/tests/examples/
-      - name: Remove example files from external libs
-        uses: JesseTG/rm@v1.0.2
-        with:
-          path: ./an_bluefox_extension/libs/external_libs/numpy/random/_examples/
       - name: Setup Development Enviroment
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
