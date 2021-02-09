@@ -32,6 +32,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install numpy==1.17.5
+          pip install --target=./an_bluefox_extension/libs/external_libs scipy
           pip install Cython --install-option="--no-cython-compile"
       - name: Download Animation Nodes' Headers
         uses: i3h/download-release-asset@v1
