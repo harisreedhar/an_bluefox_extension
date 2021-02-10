@@ -34,7 +34,6 @@ bl_info = {
 import bpy
 import addon_utils
 from . import auto_load
-from . import addon_updater_ops
 
 try: import animation_nodes
 except:
@@ -47,7 +46,6 @@ auto_load.init()
 animation_nodes.sockets.info.updateSocketInfo()
 
 def register():
-    addon_updater_ops.register(bl_info)
     auto_load.register()
 
 def unregister():

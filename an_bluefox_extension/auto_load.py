@@ -52,8 +52,6 @@ def get_all_submodules(directory):
 
 def iter_submodules(path, package_name):
     for name in sorted(iter_submodule_names(path)):
-        if name.startswith("addon_updater"):
-            continue
         yield importlib.import_module("." + name, package_name)
 
 def iter_submodule_names(path, root=""):
