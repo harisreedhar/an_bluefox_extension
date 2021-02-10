@@ -71,7 +71,7 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
             if self.validateMinDistance(point, spline, minDistance):
                 spline.appendPoint(point, radius, tilt)
 
-        return spline
+        return spline.copy()
 
     def validateMinDistance(self, point, spline, minDistance):
         if len(spline.points):
