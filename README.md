@@ -12,14 +12,14 @@
    
 | For blender 2.93 or above            
 |----------------|
-|[Linux(Python 3.8)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_linux_py38.zip)        |
-|[Linux(Python 3.9)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_linux_py39.zip)        |
+|[Ubuntu(Python 3.8)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_linux_py38.zip)        |
+|[Ubuntu(Python 3.9)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_linux_py39.zip)        |
 |[Mac(Python 3.9)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_macOS_py39.zip)         |
 |[Windows(Python 3.9)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_windows_py39.zip)   |
 
 | For blender 2.90 - 2.92 (no longer updated)             
 |----------------|
-|[Linux(Python 3.7)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_linux_py37.zip)        |
+|[Ubuntu(Python 3.7)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_linux_py37.zip)        |
 |[Mac(Python 3.7)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_macOS_py37.zip)         |
 |[Windows(Python 3.7)](https://github.com/harisreedhar/an_bluefox_extension/releases/download/master-cd-build/an_bluefox_extension_v1_0_windows_py37.zip)   |
 
