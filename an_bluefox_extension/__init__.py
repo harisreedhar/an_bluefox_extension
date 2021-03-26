@@ -21,8 +21,8 @@ Created by <Harisreedhar>
 bl_info = {
     "name": "AN Bluefox extension",
     "author": "Harisreedhar",
-    "version": (1, 0, 0),
-    "blender": (2, 90, 0),
+    "version": (1, 1, 0),
+    "blender": (2, 93, 0),
     "location": "Animation Nodes",
     "description": "Extension For Animation Nodes.",
     "warning": "This addon is still in development",
