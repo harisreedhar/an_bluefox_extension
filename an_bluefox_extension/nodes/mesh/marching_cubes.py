@@ -105,9 +105,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
 
     def createMesh(self, vertices, faces):
         edges = createValidEdgesList(polygons = faces)
-        materialIndices = LongList(length = len(faces))
-        materialIndices.fill(0)
-        return Mesh(vertices, edges, faces, materialIndices, skipValidation = True)
+        return Mesh(vertices, edges, faces, skipValidation = True)
 
     def getField(self, field, grid):
         gx, gy, gz = grid[:,0], grid[:,1], grid[:,2]
