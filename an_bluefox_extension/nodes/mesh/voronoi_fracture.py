@@ -94,7 +94,6 @@ def getMeshFromBMesh(bMesh):
         vertices = Vector3DList.fromValues(v.co for v in bMesh.verts)
         edges = EdgeIndicesList.fromValues(tuple(v.index for v in edge.verts) for edge in bMesh.edges)
         polygons = PolygonIndicesList.fromValues(tuple(v.index for v in face.verts) for face in bMesh.faces)
-        materialIndices = LongList.fromValues(face.material_index for face in bMesh.faces)
-        return Mesh(vertices, edges, polygons, materialIndices)
+        return Mesh(vertices, edges, polygons)
     except:
         return Mesh()
