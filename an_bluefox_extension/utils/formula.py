@@ -16,7 +16,7 @@ def evaluateFormula(formula, count = 0, falloff = 0,
                           d = 0, e = 0, f = 0,
                           x = 0, y = 0, z = 0):
 
-    id = np.linspace(0, count, num = count, dtype = "int")
+    id = np.linspace(0, count-1, num = count, dtype = "int")
     frame = bpy.context.scene.frame_current
 
     # constants
