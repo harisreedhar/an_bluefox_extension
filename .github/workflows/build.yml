@@ -40,6 +40,7 @@ jobs:
           repo: animation_nodes
           tag: master-cd-build
           file: animation_nodes_headers.zip
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       - name: Extract Headers
         run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Setup Development Enviroment
