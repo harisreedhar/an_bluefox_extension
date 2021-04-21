@@ -22,6 +22,7 @@ def evaluateFormula(formula, count = 0, falloff = 0,
     # constants
     pi = np.pi
     e = np.e
+    tau = 2 * pi
 
     # functions
     def abs(x):return np.absolute(x)
@@ -39,6 +40,9 @@ def evaluateFormula(formula, count = 0, falloff = 0,
     def sin(x):return np.sin(x)
     def cos(x):return np.cos(x)
     def tan(x):return np.tan(x)
+    def sinh(x):return np.sinh(x)
+    def cosh(x):return np.cosh(x)
+    def tanh(x):return np.tanh(x)
     def asin(x):return np.arcsin(x)
     def acos(x):return np.arccos(x)
     def atan(x):return np.arctan(x)
@@ -50,6 +54,16 @@ def evaluateFormula(formula, count = 0, falloff = 0,
     def min(x,y):return np.minimum(x,y)
     def copysign(x,y):return np.copysign(x,y)
     def dist(x,y):return np.linalg.norm(x-y)
+    def rnd(*args):
+        argLen = len(args)
+        if argLen > 0:
+            np.random.seed(int(args[-1]))
+        if argLen == 2:
+            return np.random.uniform(0, args[0], count)
+        elif argLen == 3:
+            return np.random.uniform(args[0], args[1], count)
+        else:
+            return np.random.rand(count)
 
     evaluatedValue = eval(formula)
 
