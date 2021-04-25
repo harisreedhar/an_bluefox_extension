@@ -13,7 +13,6 @@ from animation_nodes . utils.depsgraph import getActiveDepsgraph, getEvaluatedID
 class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_bf_ObjectFractureNode"
     bl_label = "Object Fracture"
-    bl_width_default = 180
     errorHandlingType = "EXCEPTION"
     options = {"NOT_IN_SUBPROGRAM"}
 
@@ -21,7 +20,7 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     shadeSmooth: BoolProperty(update = AnimationNode.refresh)
     smoothAngle: FloatProperty(default = 45, update = AnimationNode.refresh)
     offset: FloatProperty(update = AnimationNode.refresh)
-    nCloseFinds: IntProperty(default = 25, update = AnimationNode.refresh)
+    nCloseFinds: IntProperty(default = 100, update = AnimationNode.refresh)
     sourceObject: PointerProperty(type = bpy.types.Object, description = "Source Object",
                              update = AnimationNode.refresh)
     datas = {}
@@ -42,15 +41,19 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         row = col.row(align = True)
         row.prop(self, "sourceObject", text = "")
         row1 = col.row(align = True)
-        row1.prop(self, "fillInner", text = "Inside Fill", toggle = True)
-        row1.prop(self, "shadeSmooth", text = "Shade Smooth", toggle = True)
-        if self.shadeSmooth:
-            row2 = col.row(align = True)
-            row2.prop(self, "smoothAngle", text = "Smooth Angle")
+        row1.prop(self, "fillInner", text = "Fill Inner", toggle = True)
         row3 = col.row(align = True)
         row3.prop(self, "offset", text = "Offset")
         row4 = col.row(align = True)
         row4.prop(self, "nCloseFinds", text = "Quality")
+
+    def drawAdvanced(self, layout):
+        col = layout.column()
+        row = col.row(align = True)
+        row.prop(self, "shadeSmooth", text = "Shade Smooth")
+        if self.shadeSmooth:
+            row2 = col.row(align = True)
+            row2.prop(self, "smoothAngle", text = "Smooth Angle")
 
     def execute(self, points, scene):
         self.datas["points"] = points
@@ -63,12 +66,16 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     def invokeFractureFunction(self):
         object = self.sourceObject
         if object is not None:
+            wm = bpy.context.window_manager
+            wm.progress_begin(0, 100)
+            wm.progress_update(1)
             points = self.datas.get("points")
             scene = self.datas.get("scene")
             parameters = (points, self.fillInner, self.offset, self.nCloseFinds)
             fractureObjects(object, scene, self.getSubCollectionName(), parameters,
-                            self.shadeSmooth, self.smoothAngle)
+                            self.shadeSmooth, self.smoothAngle, wm)
             self.refresh()
+            wm.progress_end()
             return True
 
     def getSubCollectionName(self):
@@ -80,10 +87,11 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
             removeObjectsFromCollection(subCollection)
             bpy.data.collections.remove(subCollection)
 
-def fractureObjects(object, scene, name, parameters, smooth, angle):
+def fractureObjects(object, scene, name, parameters, smooth, angle, wm):
     try:
         bm = getBMesh(object, scene)
-        bmList = cellFracture(bm, parameters)
+        wm.progress_update(2)
+        bmList = cellFracture(bm, parameters, wm)
         subCollection = getCollection(scene, name)
         removeObjectsFromCollection(subCollection)
         fractureName = object.name + "_chunk."
@@ -91,6 +99,7 @@ def fractureObjects(object, scene, name, parameters, smooth, angle):
         if smooth:
             shadeObjectsSmooth(objects, angle)
         setIDKeys(objects)
+        wm.progress_update(99)
     except Exception as e:
         print("Object fracture failed:")
         print(str(e))
@@ -159,16 +168,17 @@ def setOrigin(object):
     matrixWorld.translation = matrixWorld @ origin
 
 # Reference: https://github.com/nortikin/sverchok/blob/master/node_scripts/SNLite_templates/demo/voronoi_3d.py
-def cellFracture(bm, parameters):
+def cellFracture(bm, parameters, wm):
     points = [Vector([0, 0, 0])]
     fillInner = False
     offset = 0
     nCloseFinds = 14
     if parameters is not None:
         points, fillInner, offset, nCloseFinds = parameters
-    locators = findLocators(points, nCloseFinds, offset)
+    locators = findLocators(points, nCloseFinds, offset, wm)
     bmList = []
-    for item in locators:
+    progressTot = len(locators)
+    for i, item in enumerate(locators):
         bMesh = bm.copy()
         for point, normal in item:
             geomIn = bMesh.verts[:] + bMesh.edges[:] + bMesh.faces[:]
@@ -184,15 +194,18 @@ def cellFracture(bm, parameters):
                 bmesh.ops.edgeloop_fill(bMesh, edges=fres['edges'])
         if len(bMesh.faces) > 0:
             bmList.append(bMesh)
+        wm.progress_update(int((i/progressTot)*95)+5)
     return bmList
 
-def findLocators(points, nCloseFinds, offset):
+def findLocators(points, nCloseFinds, offset, wm):
     size = len(points)
     kd = mathutils.kdtree.KDTree(size)
+    wm.progress_update(3)
     for i, xyz in enumerate(points):
         kd.insert(xyz, i)
     kd.balance()
     locators = [[]] * size
+    wm.progress_update(4)
     for idx, vtx in enumerate(points):
         nList = kd.find_n(vtx, nCloseFinds)
         pointNormals = []
@@ -203,4 +216,5 @@ def findLocators(points, nCloseFinds, offset):
             normal = co - vtx
             pointNormals.append((point, normal))
         locators[idx] = pointNormals
+    wm.progress_update(5)
     return locators
