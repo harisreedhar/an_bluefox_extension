@@ -86,7 +86,6 @@ class BF_ChaoticAttractorsNode(bpy.types.Node, AnimationNode):
                             scale, self.chaoticModel)
         return vectors
 
-@cython.cdivision(True)
 cdef Vector3DList attractor(Py_ssize_t iterations,
                             float dt,
                             initialVector,
