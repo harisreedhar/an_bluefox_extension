@@ -6,7 +6,6 @@ from bpy.props import *
 from mathutils import Vector, Matrix
 from animation_nodes . base_types import AnimationNode
 from animation_nodes . utils.data_blocks import removeNotUsedDataBlock
-from animation_nodes . nodes . mesh . bmesh_create import getBMeshFromMesh
 from animation_nodes . nodes.container_provider import getMainObjectContainer
 from animation_nodes . utils.depsgraph import getActiveDepsgraph, getEvaluatedID
 
@@ -72,22 +71,24 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         layout.prop(self, "copyObjectData", text="Copy object data")
 
     def execute(self, points, scene):
-        self.datas["points"] = points
-        self.datas["scene"] = scene
+        self.datas[self.identifier] = {'points':points, 'scene':scene}
         if None in [scene, self.sourceObject]:
             return []
         collection = self.collection
         return list(getattr(collection, "objects", []))
 
     def invokeFractureFunction(self):
+        datas = self.datas.get(self.identifier)
+        if datas is None:
+            return
+        points = datas.get("points")
+        scene = datas.get("scene")
         object = self.sourceObject
         collection = self.collection
-        if None not in [object, collection]:
+        if None not in (points, scene, object, collection):
             wm = bpy.context.window_manager
             wm.progress_begin(0, 100)
             wm.progress_update(1)
-            points = self.datas.get("points")
-            scene = self.datas.get("scene")
             parameters = (points, self.fillInner, self.shrink, self.nCloseFinds,
                         self.innerMaterialIndex)
             fractureObjects(object, scene, collection, parameters,
@@ -101,6 +102,15 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         subCollection = bpy.data.collections.new('AN_Fracture_Collection')
         mainCollection.children.link(subCollection)
         self.collection = subCollection
+
+    def delete(self):
+        keys = list(self.datas.keys())
+        for key in keys:
+            if key.startswith(self.identifier):
+                self.datas.pop(key)
+
+    def duplicate(self, sourceNode):
+        self.sourceObject = self.collection = None
 
 def fractureObjects(object, scene, collection, parameters, smooth, angle, copyObjectData, wm):
     try:
