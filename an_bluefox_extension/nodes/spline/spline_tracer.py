@@ -83,3 +83,9 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
         for key in self.executionCache.keys():
             if key.startswith(self.identifier):
                 self.executionCache[key] = None
+
+    def delete(self):
+        keys = list(self.executionCache.keys())
+        for key in keys:
+            if key.startswith(self.identifier):
+                self.executionCache.pop(key)
