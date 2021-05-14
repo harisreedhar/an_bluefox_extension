@@ -85,7 +85,7 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         scene = datas.get("scene")
         object = self.sourceObject
         collection = self.collection
-        if None not in (points, scene, object, collection):
+        if None not in [object, collection]:
             wm = bpy.context.window_manager
             wm.progress_begin(0, 100)
             wm.progress_update(1)
