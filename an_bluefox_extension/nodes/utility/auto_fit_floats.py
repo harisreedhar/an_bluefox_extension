@@ -1,11 +1,10 @@
 import bpy
 from animation_nodes . base_types import AnimationNode
-from animation_nodes . events import executionCodeChanged
 from animation_nodes . nodes . number . c_utils import mapRange_DoubleList_Interpolated
 
-class BF_AutoNormalizeFloatsNode(bpy.types.Node, AnimationNode):
-    bl_idname = "an_bf_NormalizeFloatsNode"
-    bl_label = "Auto Normalize Floats"
+class BF_AutoFitFloatsNode(bpy.types.Node, AnimationNode):
+    bl_idname = "an_bf_AutoFitFloatsNode"
+    bl_label = "Auto Fit Floats"
 
     def create(self):
         self.newInput("Float List", "Number List", "numbers")
