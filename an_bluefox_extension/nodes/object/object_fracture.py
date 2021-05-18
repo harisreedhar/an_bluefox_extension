@@ -6,7 +6,6 @@ from bpy.props import *
 from mathutils import Vector, Matrix
 from animation_nodes . base_types import AnimationNode
 from animation_nodes . utils.data_blocks import removeNotUsedDataBlock
-from animation_nodes . nodes.container_provider import getMainObjectContainer
 from animation_nodes . utils.depsgraph import getActiveDepsgraph, getEvaluatedID
 
 class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
@@ -32,7 +31,6 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
 
     def create(self):
         self.newInput("Vector List", "Source Points", "points")
-        self.newInput("Scene", "Scene", "scene", hide = True)
         self.newOutput("Object List", "Objects", "objects")
 
     def draw(self, layout):
@@ -50,12 +48,14 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         row2 = col.row(align = True)
         row2.prop(self, "nCloseFinds", text = "Quality")
         row3 = col.row(align = True)
-        row3.prop(self, "fillInner", text = "Fill Inner", toggle = True)
+        fillInnerIcon = "DOWNARROW_HLT" if self.fillInner else "RIGHTARROW"
+        row3.prop(self, "fillInner", text = "Fill Inner", toggle = True, icon=fillInnerIcon)
         if self.fillInner:
             row33 = col.row(align = True)
             row33.prop(self, "innerMaterialIndex", text = "Material Index")
         row4 = col.row(align = True)
-        row4.prop(self, "shadeSmooth", text = "Shade Smooth", toggle = True)
+        shadeSmoothIcon = "DOWNARROW_HLT" if self.shadeSmooth else "RIGHTARROW"
+        row4.prop(self, "shadeSmooth", text = "Shade Smooth", toggle = True, icon=shadeSmoothIcon)
         if self.shadeSmooth:
             row44 = col.row(align = True)
             row44.prop(self, "smoothAngle", text = "Angle")
@@ -70,38 +70,35 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     def drawAdvanced(self, layout):
         layout.prop(self, "copyObjectData", text="Copy object data")
 
-    def execute(self, points, scene):
-        self.datas[self.identifier] = {'points':points, 'scene':scene}
-        if None in [scene, self.sourceObject]:
-            return []
+    def execute(self, points):
+        self.datas[self.identifier] = {'points':points}
         collection = self.collection
         return list(getattr(collection, "objects", []))
 
     def invokeFractureFunction(self):
         datas = self.datas.get(self.identifier)
         if datas is None:
-            return
+            return False
         points = datas.get("points")
-        scene = datas.get("scene")
         object = self.sourceObject
         collection = self.collection
-        if None not in [object, collection]:
-            wm = bpy.context.window_manager
-            wm.progress_begin(0, 100)
-            wm.progress_update(1)
-            parameters = (points, self.fillInner, self.shrink, self.nCloseFinds,
-                        self.innerMaterialIndex)
-            fractureObjects(object, scene, collection, parameters,
-                            self.shadeSmooth, self.smoothAngle, self.copyObjectData, wm)
-            self.refresh()
-            wm.progress_end()
-            return True
+        if any(e is None for e in [object, collection, points]):
+            return False
+        wm = bpy.context.window_manager
+        wm.progress_begin(0, 100)
+        wm.progress_update(1)
+        parameters = (points, self.fillInner, self.shrink, self.nCloseFinds,
+                    self.innerMaterialIndex)
+        fractureObjects(object, collection, parameters,
+                        self.shadeSmooth, self.smoothAngle, self.copyObjectData, wm)
+        self.refresh()
+        wm.progress_end()
+        return True
 
     def createCollection(self):
-        mainCollection = getMainObjectContainer(self.datas.get("scene"))
-        subCollection = bpy.data.collections.new('AN_Fracture_Collection')
-        mainCollection.children.link(subCollection)
-        self.collection = subCollection
+        collection = bpy.data.collections.new('AN_Fracture_Collection')
+        bpy.context.scene.collection.children.link(collection)
+        self.collection = collection
 
     def delete(self):
         keys = list(self.datas.keys())
@@ -112,9 +109,9 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     def duplicate(self, sourceNode):
         self.sourceObject = self.collection = None
 
-def fractureObjects(object, scene, collection, parameters, smooth, angle, copyObjectData, wm):
+def fractureObjects(object, collection, parameters, smooth, angle, copyObjectData, wm):
     try:
-        bm = getBMesh(object, scene)
+        bm = getBMesh(object)
         wm.progress_update(2)
         bmList = cellFracture(bm, parameters, wm)
         removeObjectsFromCollection(collection)
@@ -161,9 +158,9 @@ def removeObjectsFromCollection(collection):
         if data.users == 0:
             removeNotUsedDataBlock(data, type)
 
-def getBMesh(object, scene):
+def getBMesh(object):
     bm = bmesh.new()
-    if getattr(object, "type", "") != "MESH" or scene is None:
+    if getattr(object, "type", "") != "MESH":
         return bm
     bm.from_object(object, getActiveDepsgraph())
     evaluatedObject = getEvaluatedID(object)
