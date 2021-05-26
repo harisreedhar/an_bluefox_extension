@@ -26,9 +26,9 @@ def getExtensionArgs(utils):
 
 def getCompileInfo(utils):
     if utils.onWindows:
-        return ("libPerlin1234_windows.lib",
+        return ("Perlin1234_windows.lib",
                 [os.path.join(sourceDir, "compile_windows.bat")],
-                {"libraries" : ["libPerlin1234_windows"],
+                {"libraries" : ["Perlin1234_windows"],
                  "extra_link_args" : ["/NODEFAULTLIB:LIBCMT"]})
     if utils.onLinux:
         return ("libPerlin1234_linux.a",

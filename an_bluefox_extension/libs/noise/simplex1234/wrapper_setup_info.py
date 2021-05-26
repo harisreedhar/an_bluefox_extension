@@ -26,9 +26,9 @@ def getExtensionArgs(utils):
 
 def getCompileInfo(utils):
     if utils.onWindows:
-        return ("libSimplex1234_windows.lib",
+        return ("Simplex1234_windows.lib",
                 [os.path.join(sourceDir, "compile_windows.bat")],
-                {"libraries" : ["libSimplex1234_windows"],
+                {"libraries" : ["Simplex1234_windows"],
                  "extra_link_args" : ["/NODEFAULTLIB:LIBCMT"]})
     if utils.onLinux:
         return ("libSimplex1234_linux.a",
