@@ -52,6 +52,7 @@ class BF_GeneratorMenu(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         insertNode(layout, "an_bf_ChaoticAttractorsNode", "Chaotic Attractors")
+        insertNode(layout, "an_bf_Noise4DNode", "Noise 4D")
 
 class BF_MatrixMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Matrix_menu"
