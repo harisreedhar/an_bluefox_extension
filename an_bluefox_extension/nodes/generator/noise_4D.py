@@ -37,11 +37,9 @@ class BF_Noise4DNode(bpy.types.Node, AnimationNode):
             layout.prop(self, "periodic", text = "Periodic")
 
     def getExecutionCode(self, required):
-        if not self.useWList:
-            yield "w = DoubleList.fromValue(w)"
         yield "noise = an_bluefox_extension.libs.noise"
         yield "vectors = noise.setFrequencyAndOffset(vectors, frequency, offset.x, offset.y, offset.z)"
-        yield  "_vectors = VirtualVector3DList.create(vectors, (0,0,0))"
+        yield "_vectors = VirtualVector3DList.create(vectors, (0,0,0))"
         yield "_w = VirtualDoubleList.create(w, 0)"
         yield "amount = VirtualVector3DList.getMaxRealLength(_vectors, _w)"
         if self.noiseType == "PERLIN":
