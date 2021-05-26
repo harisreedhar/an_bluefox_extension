@@ -1,9 +1,6 @@
 *.pyc
 *.pyd
 *.py~
-*.c
-*.h
-*.cpp
 *.exp
 *.lib
 *.obj
