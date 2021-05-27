@@ -25,7 +25,6 @@ bl_info = {
     "blender": (2, 93, 0),
     "location": "Animation Nodes",
     "description": "Extension For Animation Nodes.",
-    "warning": "This addon is still in development",
     "doc_url": "",
     "tracker_url": "",
     "category": "Nodes",

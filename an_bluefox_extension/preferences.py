@@ -28,7 +28,6 @@ def drawModuleInstaller(context: bpy.types.Context, layout: bpy.types.UILayout):
             row.label(text = f'{title} is installed', icon = 'CHECKMARK')
         else:
             row = col.row(align = True)
-            #row.label(text = f'{title} is missing', icon = 'ERROR')
             op = row.operator(module_installer.BF_InstallModule.bl_idname,
                       text = f'Install {title}', icon = 'IMPORT')
             op.name = module
