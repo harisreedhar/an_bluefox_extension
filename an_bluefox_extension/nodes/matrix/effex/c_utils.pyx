@@ -1,5 +1,7 @@
 from libc.math cimport sqrt, ceil, floor, abs as absNumber
 
+from animation_nodes . nodes . falloff . point_distance_falloff import PointDistanceFalloff
+
 from animation_nodes . math cimport Vector3, setMatrixTranslation, setScaleMatrix, mixVec3, mixQuat, Matrix4, Quaternion
 
 from animation_nodes . nodes . matrix . c_utils import*
@@ -21,7 +23,7 @@ from animation_nodes . data_structures cimport (
     Vector3DList, DoubleList, FloatList, EulerList, Matrix4x4List,
     QuaternionList, VirtualQuaternionList,
     VirtualVector3DList, VirtualEulerList, VirtualMatrix4x4List,
-    VirtualDoubleList, VirtualFloatList
+    VirtualDoubleList, VirtualFloatList, Falloff, FalloffEvaluator
 )
 
 ################################################### Inheritance effex code ###################################################
@@ -137,9 +139,9 @@ def inheritMatrixOverSpline(Matrix4x4List mA,
                                             influences))
     if align:
         rotation = alignOnSpline(Matrix4x4List.toQuaternions(mA),
-                                  Matrix4x4List.toQuaternions(mB),
-                                  Matrix4x4List.toQuaternions(splineRotations),
-                                  influences)
+                                 Matrix4x4List.toQuaternions(mB),
+                                 Matrix4x4List.toQuaternions(splineRotations),
+                                 influences)
 
     cdef Vector3DList scale = vectorListLerp(extractMatrixScales(mA),
                                          extractMatrixScales(mB),
@@ -225,3 +227,118 @@ def getDirections(Vector3DList points, Vector3DList targets):
             directions.data[j].z += temp.data[j].z
 
     return directions
+
+####################################    Target Effector Functions start   ##############################################
+# code is shit, need complete rewrite
+
+cdef Vector3DList findTargetDirection(Vector3DList vectors, Vector3 target, Py_ssize_t negFlag):
+    cdef Py_ssize_t i
+    cdef Py_ssize_t count = len(vectors)
+    cdef float x, y, z, divisor, vectorLength
+    cdef Vector3DList outVectors = Vector3DList(length = count)
+
+    for i in range(count):
+        x = vectors.data[i].x - target.x
+        y = vectors.data[i].y - target.y
+        z = vectors.data[i].z - target.z
+
+        outVectors.data[i].x = x
+        outVectors.data[i].y = y
+        outVectors.data[i].z = z
+
+        vectorLength = sqrt(x * x + y * y + z * z)
+
+        if vectorLength != 0:
+            divisor = 1 / (vectorLength * vectorLength) * negFlag
+            outVectors.data[i].x *= divisor
+            outVectors.data[i].y *= divisor
+            outVectors.data[i].z *= divisor
+
+    return outVectors
+
+def findSphericalDistance(Vector3DList vectors,
+                          Vector3 target,
+                          float size,
+                          float width,
+                          Py_ssize_t negFlag,
+                          float offsetStrength,
+                          FloatList influences,
+                          useOffset):
+    cdef Py_ssize_t i
+    cdef Py_ssize_t count = vectors.length
+    cdef Vector3DList outVectors = Vector3DList(length = count)
+    cdef Falloff pointfalloff = PointDistanceFalloff((target.x, target.y, target.z), size-1, width)
+
+    cdef FalloffEvaluator falloffEvaluator = pointfalloff.getEvaluator("LOCATION")
+    cdef FloatList distances = falloffEvaluator.evaluateList(vectors)
+    distances.clamp(0,1)
+
+    for i in range(count):
+        outVectors.data[i].x = (vectors.data[i].x - target.x) * negFlag
+        outVectors.data[i].y = (vectors.data[i].y - target.y) * negFlag
+        outVectors.data[i].z = (vectors.data[i].z - target.z) * negFlag
+
+        if useOffset:
+            outVectors.data[i].x *= distances.data[i] * influences.data[i] * offsetStrength
+            outVectors.data[i].y *= distances.data[i] * influences.data[i] * offsetStrength
+            outVectors.data[i].z *= distances.data[i] * influences.data[i] * offsetStrength
+
+    return outVectors, distances
+
+def targetEffexFunction(Matrix4x4List targets,
+                        Vector3DList targetOffsets,
+                        float distanceIn,
+                        float width,
+                        float offsetStrength,
+                        FloatList influences,
+                        bint useOffset,
+                        bint useDirection):
+
+    cdef Py_ssize_t i, j, negFlag
+    cdef Py_ssize_t count = targetOffsets.length
+    cdef Py_ssize_t targetsCount = targets.length
+    cdef float size, scale
+    cdef Vector3DList newPositions, newDiretions
+    cdef Vector3DList targetDirections = Vector3DList(length = count)
+    targetDirections.fill(0)
+    cdef Vector3DList centers = extractMatrixTranslations(targets)
+    cdef FloatList distances = FloatList(length = count)
+    distances.fill(0)
+    cdef FloatList strengths = FloatList(length = count)
+    strengths.fill(0)
+
+    for i in range(targetsCount):
+        negFlag = 1
+        scale = targets.data[i].a11
+        if scale < 0:
+            negFlag = -1
+        size = absNumber(scale) + distanceIn
+        if useOffset:
+            newPositions, distances = findSphericalDistance(targetOffsets,
+                                                            centers.data[i],
+                                                            size,
+                                                            width,
+                                                            negFlag,
+                                                            offsetStrength,
+                                                            influences,
+                                                            useOffset)
+
+            for j in range(count):
+                targetOffsets.data[j].x += newPositions.data[j].x
+                targetOffsets.data[j].y += newPositions.data[j].y
+                targetOffsets.data[j].z += newPositions.data[j].z
+                strengths.data[j] = max(strengths.data[j], distances.data[j]) * influences.data[j]
+
+        if useDirection:
+            newDiretions = findTargetDirection(targetOffsets, centers.data[i], negFlag)
+            for j in range(targetDirections.length):
+                targetDirections.data[j].x += newDiretions.data[j].x
+                targetDirections.data[j].y += newDiretions.data[j].y
+                targetDirections.data[j].z += newDiretions.data[j].z
+
+    if useDirection:
+        targetDirections.normalize()
+
+    return targetOffsets, targetDirections, strengths
+
+####################################    Target Effector Functions end   ##############################################

@@ -4,7 +4,8 @@ from animation_nodes . nodes . matrix . c_utils import*
 
 from animation_nodes . math cimport (
      Quaternion, Euler3, Vector3, Matrix4,
-     setTranslationRotationScaleMatrix, quaternionNormalize_InPlace
+     setTranslationRotationScaleMatrix, quaternionNormalize_InPlace,
+     mixEul3, euler3ToQuaternion, quaternionToEuler3
 )
 
 from animation_nodes . data_structures cimport (
@@ -240,3 +241,15 @@ def matrixListLerp(Matrix4x4List mA, Matrix4x4List mB, FloatList factors):
         setTranslationRotationScaleMatrix(&result.data[i], &t, &r, &s)
 
     return result
+
+def eulerListLerp(EulerList eA, EulerList eB, FloatList factors):
+    cdef Py_ssize_t i
+    cdef Py_ssize_t amount = eA.length
+    cdef Quaternion q, qA, qB
+    cdef EulerList e = EulerList(length = amount)
+    for i in range(amount):
+        euler3ToQuaternion(&qA, eA.data + i)
+        euler3ToQuaternion(&qB, eB.data + i)
+        quaternionNlerpInPlace(&q, &qA, &qB, factors.data[i])
+        quaternionToEuler3(e.data + i, &q)
+    return e

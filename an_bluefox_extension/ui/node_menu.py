@@ -64,6 +64,7 @@ class BF_MatrixMenu(bpy.types.Menu):
         insertNode(layout, "an_bf_FormulaEffexNode", "Formula Effex")
         insertNode(layout, "an_bf_InheritanceEffexNode", "Inheritance Effex")
         insertNode(layout, "an_bf_StepEffexNode", "Step Effex")
+        insertNode(layout, "an_bf_TargetEffexNode", "Target Effex")
         insertNode(layout, "an_bf_TimeEffexNode", "Time Effex")
         layout.separator()
 
