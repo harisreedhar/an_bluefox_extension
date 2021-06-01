@@ -42,6 +42,7 @@ class BF_FalloffMenu(bpy.types.Menu):
         insertNode(layout, "an_bf_MathFalloffNode", "Math Falloff")
         insertNode(layout, "an_bf_MandelBulbFalloffNode", "Mandelbulb Falloff")
         insertNode(layout, "an_bf_MemoryFalloffNode", "Memory Falloff")
+        insertNode(layout, "an_bf_Noise4DFalloffNode", "Noise 4D Falloff")
         insertNode(layout, "an_bf_ShapeFalloffNode", "Shape Falloff")
         insertNode(layout, "an_bf_wavefalloff", "Wave Falloff")
 
