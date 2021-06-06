@@ -8,12 +8,12 @@ class BF_AutoFitVectorsNode(bpy.types.Node, AnimationNode):
     bl_label = "Auto Fit Vectors"
 
     def create(self):
-        self.newInput("Boolean", "Align Center", "alignCenter", value = True)
+        self.newInput("Vector List", "vectors", "vectors", dataIsModified = True)
         self.newInput("Float", "Scale", "scale", value = 1)
-        self.newInput("Vector List", "vectors", "vectors")
+        self.newInput("Boolean", "Align Center", "alignCenter", value = True)
         self.newOutput("Vector List", "Result", "result")
 
-    def execute(self, alignCenter, scale, vectors):
+    def execute(self, vectors, scale, alignCenter):
         if len(vectors) == 0:
             return vectors
         array = vectors.asNumpyArray()
