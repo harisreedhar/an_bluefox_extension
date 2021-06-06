@@ -1,1 +1,1 @@
-from . noise import pyPerlin4D, pyPeriodicPerlin4D, pySimplex4D, setFrequencyAndOffset
+from . noise4D import noise4D

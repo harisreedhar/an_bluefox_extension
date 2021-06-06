@@ -1,8 +1,0 @@
-cdef float perlin1D(float x)
-cdef float perlin2D(float x, float y)
-cdef float perlin3D(float x, float y, float z)
-cdef float perlin4D(float x, float y, float z, float w)
-cdef float periodicPerlin1D(float x, int px)
-cdef float periodicPerlin2D(float x, float y, int px, int py)
-cdef float periodicPerlin3D(float x, float y, float z, int px, int py, int pz)
-cdef float periodicPerlin4D(float x, float y, float z, float w, int px, int py, int pz, int pw)
