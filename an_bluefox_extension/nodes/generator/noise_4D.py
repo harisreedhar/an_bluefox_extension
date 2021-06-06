@@ -10,7 +10,7 @@ class BF_Noise4DNode(bpy.types.Node, AnimationNode):
     periodic: BoolProperty(update = AnimationNode.refresh)
 
     def create(self):
-        self.newInput("Vector List", "Vectors", "vectors")
+        self.newInput("Vector List", "Vectors", "vectors", dataIsModified = True)
         self.newInput(VectorizedSocket("Float", "useWList",
             ("W", "w"), ("Ws", "w")))
         self.newInput("Float", "Amplitude", "amplitude", value = 1)
