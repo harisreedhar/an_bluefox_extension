@@ -31,6 +31,7 @@ class BF_ColorMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_MagicColorsNode", "Magic Colors")
         insertNode(layout, "an_bf_MixRGB", "Mix RGB")
 
 class BF_FalloffMenu(bpy.types.Menu):
