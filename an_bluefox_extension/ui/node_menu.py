@@ -40,6 +40,7 @@ class BF_FalloffMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_GradientFalloffNode", "Gradient Falloff")
         insertNode(layout, "an_bf_MathFalloffNode", "Math Falloff")
         insertNode(layout, "an_bf_MandelBulbFalloffNode", "Mandelbulb Falloff")
         insertNode(layout, "an_bf_MemoryFalloffNode", "Memory Falloff")
