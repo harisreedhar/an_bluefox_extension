@@ -26,6 +26,8 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
     fieldType: EnumProperty(name = "Field Type", default = "FALLOFF",
         items = fieldTypeItems, update = AnimationNode.refresh)
 
+    ErrorOnTerminal: BoolProperty(name = "ErrorOnTerminal", default = False, update = AnimationNode.refresh)
+
     def create(self):
         if self.fieldType == "FALLOFF":
             self.newInput("Falloff", "Field", "field")
@@ -38,7 +40,6 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         self.newInput("Integer", "X Divisions","xDivisions", minValue = 2, value = 10)
         self.newInput("Integer", "Y Divisions","yDivisions", minValue = 2, value = 10)
         self.newInput("Integer", "Z Divisions","zDivisions", minValue = 2, value = 10)
-        self.newInput("Float", "Scale Grid","scaleGrid", value = 1)
         self.newInput("Matrix", "Transform Grid","transform")
         self.newInput(VectorizedSocket("Float", "useThresholdList",
             ("Threshold", "threshold"),("Thresholds", "threshold")), value = 0.3, hide = True)
@@ -56,6 +57,9 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
     def draw(self, layout):
         layout.prop(self, "fieldType", text = "")
 
+    def drawAdvanced(self, layout):
+        layout.prop(self, "ErrorOnTerminal", text = "Show errors on terminal")
+
     def getExecutionCode(self, required):
         yield "mesh = Mesh()"
         yield "gridPoints = Vector3DList()"
@@ -63,7 +67,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
         yield "values = DoubleList()"
         if "mesh" in required:
             yield "try:"
-            yield "    boundingBox = Vector3DList.fromNumpyArray(self.unityCube.ravel() * scaleGrid)"
+            yield "    boundingBox = Vector3DList.fromNumpyArray(self.unityCube.ravel())"
             yield "    boundingBox.transform(transform)"
             yield "    mesh, grid, norm, val = self.generateMeshFromField(boundingBox, xDivisions, yDivisions, zDivisions, field, threshold)"
             if "gridPoints" in required:
@@ -73,7 +77,8 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
             if "values" in required:
                 yield "    values = DoubleList.fromNumpyArray(val.astype('float64'))"
             yield "except Exception as e:"
-            yield "    print('Marching Cubes error:', str(e))"
+            yield "    if self.ErrorOnTerminal:"
+            yield "        print('Marching Cubes error:', str(e))"
             yield "    self.raiseErrorMessage('Mesh generation failed')"
 
     def generateMeshFromField(self, boundingBox, xDivisions, yDivisions, zDivisions, field, threshold):
