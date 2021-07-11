@@ -1,12 +1,26 @@
 import bpy
+import sys
 import bmesh
 import math
 import mathutils
 from bpy.props import *
 from mathutils import Vector, Matrix
-from animation_nodes . base_types import AnimationNode
 from animation_nodes . utils.data_blocks import removeNotUsedDataBlock
+from animation_nodes . base_types import AnimationNode, VectorizedSocket
 from animation_nodes . utils.depsgraph import getActiveDepsgraph, getEvaluatedID
+
+dataByIdentifier = {}
+
+class FractureData:
+    def __init__(self, *args):
+        self.sourceObjects = args[0]
+        self.sourcePoints  = args[1]
+        self.collection    = args[2]
+        self.shrink        = args[3]
+        self.quality       = args[4]
+        self.fillInner     = args[5]
+        self.materialIndex = args[6]
+        self.copyData      = args[7]
 
 class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_bf_ObjectFractureNode"
@@ -14,23 +28,20 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     errorHandlingType = "EXCEPTION"
     options = {"NOT_IN_SUBPROGRAM"}
 
-    sourceObject: PointerProperty(type = bpy.types.Object, description = "Source Object",
-                             update = AnimationNode.refresh)
-    shrink: FloatProperty(update = AnimationNode.refresh)
-    nCloseFinds: IntProperty(default = 100, update = AnimationNode.refresh)
-    fillInner: BoolProperty(update = AnimationNode.refresh)
-    innerMaterialIndex: IntProperty(default = 0, update = AnimationNode.refresh)
-    shadeSmooth: BoolProperty(update = AnimationNode.refresh)
-    smoothAngle: FloatProperty(default = 45, update = AnimationNode.refresh)
-    collection: PointerProperty(type = bpy.types.Collection, description = "Output Collection",
-                             update = AnimationNode.refresh)
-    copyObjectData: BoolProperty(default = True, description = "Copies UV, Vertex Colors, Materials from source",
-                            update = AnimationNode.refresh)
+    useObjectList : VectorizedSocket.newProperty()
 
-    datas = {}
+    collection    : PointerProperty(type = bpy.types.Collection, description = "Output Collection", update = AnimationNode.refresh)
+    shrink        : FloatProperty(update = AnimationNode.refresh)
+    quality       : IntProperty(default = 100, update = AnimationNode.refresh)
+    fillInner     : BoolProperty(update = AnimationNode.refresh)
+    materialIndex : IntProperty(default = 0, update = AnimationNode.refresh)
+    copyData      : BoolProperty(default = True, description = "Copies UV, Vertex Colors, Materials from source", update = AnimationNode.refresh)
 
     def create(self):
-        self.newInput("Vector List", "Source Points", "points")
+        self.newInput(VectorizedSocket("Object", "useObjectList",
+            ("Object", "object", dict(defaultDrawType = "PROPERTY_ONLY")),
+            ("Objects", "object")))
+        self.newInput("Vector List", "Points", "points")
         self.newOutput("Object List", "Objects", "objects")
 
     def draw(self, layout):
@@ -40,60 +51,63 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
                             text="Update",
                             description="fracture object into multiple objects",
                             icon="FILE_REFRESH")
+
         col = layout.column(align = True)
         row = col.row(align = True)
-        row.prop(self, "sourceObject", text = "")
-        row1 = col.row(align = True)
-        row1.prop(self, "shrink", text = "Shrink")
-        row2 = col.row(align = True)
-        row2.prop(self, "nCloseFinds", text = "Quality")
-        row3 = col.row(align = True)
-        fillInnerIcon = "DOWNARROW_HLT" if self.fillInner else "RIGHTARROW"
-        row3.prop(self, "fillInner", text = "Fill Inner", toggle = True, icon=fillInnerIcon)
-        if self.fillInner:
-            row33 = col.row(align = True)
-            row33.prop(self, "innerMaterialIndex", text = "Material Index")
-        row4 = col.row(align = True)
-        shadeSmoothIcon = "DOWNARROW_HLT" if self.shadeSmooth else "RIGHTARROW"
-        row4.prop(self, "shadeSmooth", text = "Shade Smooth", toggle = True, icon=shadeSmoothIcon)
-        if self.shadeSmooth:
-            row44 = col.row(align = True)
-            row44.prop(self, "smoothAngle", text = "Angle")
-        row5 = col.row(align = True)
-        row5.prop(self, "collection", text = "")
+        row.prop(self, "collection", text = "")
         if self.collection is None:
-            self.invokeFunction(row5, "createCollection",
+            self.invokeFunction(row, "createCollection",
                                 text="",
                                 description="Create new output collection",
                                 icon = "PLUS")
 
-    def drawAdvanced(self, layout):
-        layout.prop(self, "copyObjectData", text="Copy object data")
+        row = col.row(align = True)
+        row.prop(self, "shrink", text = "Shrink")
+        row = col.row(align = True)
+        row.prop(self, "quality", text = "Quality")
+        row = col.row(align = True)
+        fillInnerIcon = "DOWNARROW_HLT" if self.fillInner else "RIGHTARROW"
+        row.prop(self, "fillInner", text = "Fill Inner", toggle = True, icon=fillInnerIcon)
+        if self.fillInner:
+            row = col.row(align = True)
+            row.prop(self, "materialIndex", text = "Material Index")
 
-    def execute(self, points):
-        self.datas[self.identifier] = {'points':points}
+    def drawAdvanced(self, layout):
+        layout.prop(self, "copyData", text="Copy object data")
+
+    def execute(self, object, points):
+        objects = object if self.useObjectList else [object]
         collection = self.collection
+        fractureData = FractureData(objects,
+                                    points,
+                                    collection,
+                                    self.shrink,
+                                    self.quality,
+                                    self.fillInner,
+                                    self.materialIndex,
+                                    self.copyData)
+
+        dataByIdentifier[self.identifier] = fractureData
         return list(getattr(collection, "objects", []))
 
     def invokeFractureFunction(self):
-        datas = self.datas.get(self.identifier)
-        if datas is None:
-            return False
-        points = datas.get("points")
-        object = self.sourceObject
-        collection = self.collection
-        if any(e is None for e in [object, collection, points]):
-            return False
+        fractureData = dataByIdentifier.get(self.identifier)
+        if fractureData is None:
+            return
+        if None in fractureData.sourceObjects:
+            return
+        if any(i is None for i in [fractureData.sourcePoints, fractureData.collection]):
+            return
+
         wm = bpy.context.window_manager
         wm.progress_begin(0, 100)
         wm.progress_update(1)
-        parameters = (points, self.fillInner, self.shrink, self.nCloseFinds,
-                    self.innerMaterialIndex)
-        fractureObjects(object, collection, parameters,
-                        self.shadeSmooth, self.smoothAngle, self.copyObjectData, wm)
+
+        fractureObjects(fractureData, wm)
         self.refresh()
+
         wm.progress_end()
-        return True
+        return
 
     def createCollection(self):
         collection = bpy.data.collections.new('AN_Fracture_Collection')
@@ -101,45 +115,43 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         self.collection = collection
 
     def delete(self):
-        keys = list(self.datas.keys())
+        keys = list(dataByIdentifier.keys())
         for key in keys:
             if key.startswith(self.identifier):
-                self.datas.pop(key)
+                dataByIdentifier.pop(key)
 
     def duplicate(self, sourceNode):
-        self.sourceObject = self.collection = None
+        self.collection = None
 
-def fractureObjects(object, collection, parameters, smooth, angle, copyObjectData, wm):
+def fractureObjects(fractureData, wm):
     try:
-        bm = getBMesh(object)
-        wm.progress_update(2)
-        bmList = cellFracture(bm, parameters, wm)
+        sys.stdout.write("Fracturing Objects: ")
+        sys.stdout.flush()
+
+        objects = fractureData.sourceObjects
+        collection = fractureData.collection
         removeObjectsFromCollection(collection)
-        fractureName = object.name + "_chunk."
-        objects = bmeshListToObjects(bmList, fractureName, collection)
-        if smooth:
-            shadeObjectsSmooth(objects, angle)
-        setIDKeys(objects)
+        length = len(objects)
+        for i, object in enumerate(objects):
+            bm = getBMesh(object)
+            wm.progress_update(2)
+            bmList = cellFracture(bm, fractureData, wm)
+            fractureName = object.name + "_chunk."
+            fracturedObjects = bmeshListToObjects(bmList, fractureName, collection)
+            setIDKeys(fracturedObjects)
 
-        if copyObjectData:
-            for ob in objects:
-                destinationData = ob.data
-                sourceData = object.data
-                for mat in sourceData.materials:
-                    destinationData.materials.append(mat)
-                for layerAttribute in ("vertex_colors", "uv_layers"):
-                    sourceLayer = getattr(sourceData, layerAttribute)
-                    destinationLayer = getattr(destinationData, layerAttribute)
-                    for key in sourceLayer.keys():
-                        destinationLayer.new(name=key)
+            if fractureData.copyData:
+                for fracturedObject in fracturedObjects:
+                    copyObjectData(object, fracturedObject)
 
-                for i in range(len(destinationData.materials)):
-                    sourceSlot = object.material_slots[i]
-                    destinationSlot = ob.material_slots[i]
-                    destinationSlot.link = sourceSlot.link
-                    destinationSlot.material = sourceSlot.material
+            msg = f"{i+1} of {length}"
+            sys.stdout.write(msg + chr(8) * len(msg))
+            sys.stdout.flush()
+            wm.progress_update(99)
 
-        wm.progress_update(99)
+        sys.stdout.write("DONE" + " "*len(msg)+"\n")
+        sys.stdout.flush()
+
     except Exception as e:
         print("Object fracture failed:")
         print(str(e))
@@ -148,6 +160,25 @@ def setIDKeys(objects):
     for object in objects:
         object.id_keys.set("Transforms", "Initial Transforms",
                            (object.location, object.rotation_euler, object.scale))
+
+def copyObjectData(sourceObject, destinationObject):
+    sourceData = sourceObject.data
+    destinationData = destinationObject.data
+    for mat in sourceData.materials:
+        destinationData.materials.append(mat)
+    for layerAttribute in ("vertex_colors", "uv_layers"):
+        sourceLayer = getattr(sourceData, layerAttribute)
+        destinationLayer = getattr(destinationData, layerAttribute)
+        for key in sourceLayer.keys():
+            destinationLayer.new(name=key)
+
+    for i in range(len(destinationData.materials)):
+        sourceSlot = sourceObject.material_slots[i]
+        destinationSlot = destinationObject.material_slots[i]
+        destinationSlot.link = sourceSlot.link
+        destinationSlot.material = sourceSlot.material
+
+    destinationData.update()
 
 def removeObjectsFromCollection(collection):
     for obj in collection.objects:
@@ -166,18 +197,6 @@ def getBMesh(object):
     evaluatedObject = getEvaluatedID(object)
     bm.transform(evaluatedObject.matrix_world)
     return bm
-
-def shadeObjectsSmooth(objects, angle):
-    smooth = True
-    angle = math.radians(angle)
-    for object in objects:
-        mesh = object.data
-        if len(mesh.polygons) > 0:
-            smoothList = [smooth] * len(mesh.polygons)
-            mesh.polygons.foreach_set("use_smooth", smoothList)
-            mesh.polygons[0].use_smooth = smooth
-            mesh.use_auto_smooth = True
-            mesh.auto_smooth_angle = angle
 
 def bmeshListToObjects(bmList, fractureName, collection):
     objectList = []
@@ -200,14 +219,8 @@ def setOrigin(object):
     matrixWorld.translation = matrixWorld @ origin
 
 # Reference: https://github.com/nortikin/sverchok/blob/master/node_scripts/SNLite_templates/demo/voronoi_3d.py
-def cellFracture(bm, parameters, wm):
-    points = [Vector([0, 0, 0])]
-    fillInner = False
-    shrink = 0
-    nCloseFinds = 14
-    if parameters is not None:
-        points, fillInner, shrink, nCloseFinds, materialIndex = parameters
-    locators = findLocators(points, nCloseFinds, shrink, wm)
+def cellFracture(bm, fractureData, wm):
+    locators = findLocators(fractureData.sourcePoints, fractureData.quality, fractureData.shrink, wm)
     bmList = []
     progressTot = len(locators)
     for i, item in enumerate(locators):
@@ -219,11 +232,11 @@ def cellFracture(bm, parameters, wm):
                 plane_co=point, plane_no=normal, use_snap_center=False,
                 clear_outer=True, clear_inner=False
             )
-            if fillInner:
+            if fractureData.fillInner:
                 surround = [e for e in res['geom_cut']
                             if isinstance(e, bmesh.types.BMEdge)]
                 fres = bmesh.ops.edgenet_prepare(bMesh, edges=surround)
-                bmesh.ops.edgeloop_fill(bMesh, edges=fres['edges'], mat_nr=materialIndex)
+                bmesh.ops.edgeloop_fill(bMesh, edges = fres['edges'], mat_nr = fractureData.materialIndex)
 
         if len(bMesh.faces) > 0:
             bmList.append(bMesh)
