@@ -89,6 +89,7 @@ class BF_ObjectMenu(bpy.types.Menu):
         insertNode(layout, "an_bf_DupliInstancer", "Dupli Instancer")
         insertNode(layout, "an_bf_ObjectFractureNode", "Object Fracture")
         insertNode(layout, "an_bf_RigidBodyTriggerNode", "Rigidbody Trigger")
+        insertNode(layout, "an_bf_SeparateLooseObjectsNode", "Separate Loose Objects")
 
 class BF_SplineMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Spline_menu"
