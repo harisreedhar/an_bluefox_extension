@@ -3,7 +3,6 @@ from bpy.props import *
 from mathutils import Vector, Matrix
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 from . object_utils import removeObjectsFromCollection, setOrigin, setIDKeys
-from animation_nodes . utils.depsgraph import getActiveDepsgraph, getEvaluatedID
 
 dataByIdentifier = {}
 

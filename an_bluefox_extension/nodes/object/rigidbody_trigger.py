@@ -11,7 +11,7 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
     codeEffects = [VectorizedSocket.CodeEffect]
 
     for attr in ["Object", "Active", "Enabled", "Threshold","Mass","Bounciness","Friction","LinearDamping",
-                 "AngularDamping","CollisionMargin","Collections"]:
+                 "AngularDamping","EnableCollisionMargin","CollisionMargin","Collections"]:
         exec("use{}List: VectorizedSocket.newProperty()".format(attr), globals(), locals())
 
     enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = False, update = AnimationNode.refresh)
@@ -51,6 +51,9 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         self.newInput(VectorizedSocket("Float", toProp("useAngularDampingList"),
             ("Angular Damping", "angular_damping", dict(value = 0.1)),
             ("Angular Dampings", "angular_damping")))
+        self.newInput(VectorizedSocket("Boolean", toProp("useEnableCollisionMarginList"),
+            ("Enable Collision Margin", "enable_collision_margin", dict(value = False)),
+            ("Enable Collision Margins", "enable_collision_margin")))
         self.newInput(VectorizedSocket("Float", toProp("useCollisionMarginList"),
             ("Collision Margin", "collision_margin", dict(value = 0.04)),
             ("Collision Margins", "collision_margin")))
@@ -65,7 +68,6 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         for socket in self.inputs[3:]:
             socket.useIsUsedProperty = True
             socket.isUsed = False
-        for socket in self.inputs[3:]:
             socket.hide = True
 
     def drawAdvanced(self, layout):
@@ -90,8 +92,9 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         if s[5].isUsed: yield "    rigid_body.friction = friction"
         if s[6].isUsed: yield "    rigid_body.linear_damping = linear_damping"
         if s[7].isUsed: yield "    rigid_body.angular_damping = angular_damping"
-        if s[8].isUsed: yield "    rigid_body.collision_margin = collision_margin"
-        if s[9].isUsed:
+        if s[8].isUsed: yield "    rigid_body.use_margin = enable_collision_margin"
+        if s[9].isUsed: yield "    rigid_body.collision_margin = collision_margin"
+        if s[10].isUsed:
             yield "    collectionValues = [False] * 20"
             yield "    try:"
             yield "        for index in [int(i) for i in collections.split(',')]:"
