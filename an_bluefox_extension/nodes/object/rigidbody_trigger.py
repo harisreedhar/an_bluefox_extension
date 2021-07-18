@@ -14,6 +14,7 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
                  "AngularDamping","EnableCollisionMargin","CollisionMargin","Collections"]:
         exec("use{}List: VectorizedSocket.newProperty()".format(attr), globals(), locals())
 
+    objectIndex = 0
     enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = False, update = AnimationNode.refresh)
 
     def create(self):
@@ -115,7 +116,6 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
                 return None
             return rigid_body
 
-    objectIndex = 0
     def evaluateFalloff(self, falloff, object):
         location = (0,0,0)
         if self.enableDepsgraph:
