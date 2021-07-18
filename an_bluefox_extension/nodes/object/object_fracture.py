@@ -20,8 +20,8 @@ class FractureData:
         self.sourceObjects  = args[0]
         self.sourcePoints   = args[1]
         self.collection     = args[2]
-        self.shrink         = args[3]
-        self.quality        = args[4]
+        self.quality        = args[3]
+        self.shrink         = args[4]
         self.fillInner      = args[5]
         self.materialIndex  = args[6]
         self.copyData       = args[7]
@@ -37,8 +37,8 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     useObjectList  : VectorizedSocket.newProperty()
 
     collection     : PointerProperty(type = bpy.types.Collection, description = "Output Collection", update = AnimationNode.refresh)
-    shrink         : FloatProperty(update = AnimationNode.refresh)
-    quality        : IntProperty(default = 100, update = AnimationNode.refresh)
+    quality        : IntProperty(default = 25, soft_min = 0, soft_max = 100, subtype = "PERCENTAGE", update = AnimationNode.refresh)
+    shrink         : FloatProperty(default = 0.01, soft_min = 0, soft_max = 1, subtype = "FACTOR", update = AnimationNode.refresh)
     fillInner      : BoolProperty(update = AnimationNode.refresh)
     materialIndex  : IntProperty(default = 0, update = AnimationNode.refresh)
     copyData       : BoolProperty(default = True, description = "Copies UV, Vertex Colors, Materials from source", update = AnimationNode.refresh)
@@ -71,9 +71,9 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
                                 icon = "PLUS")
 
         row = col.row(align = True)
-        row.prop(self, "shrink", text = "Shrink")
-        row = col.row(align = True)
         row.prop(self, "quality", text = "Quality")
+        row = col.row(align = True)
+        row.prop(self, "shrink", text = "Shrink")
         row = col.row(align = True)
         fillInnerIcon = "DOWNARROW_HLT" if self.fillInner else "RIGHTARROW"
         row.prop(self, "fillInner", text = "Fill Inner", toggle = True, icon=fillInnerIcon)
@@ -91,11 +91,12 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
     def execute(self, object, points):
         objects = object if self.useObjectList else [object]
         collection = self.collection
+        quality = int(len(points) * (self.quality / 100))
         fractureData = FractureData(objects,
                                     points,
                                     collection,
+                                    quality,
                                     self.shrink,
-                                    self.quality,
                                     self.fillInner,
                                     self.materialIndex,
                                     self.copyData,
@@ -137,7 +138,7 @@ class BF_ObjectFracturNode(bpy.types.Node, AnimationNode):
         keys = list(dataByIdentifier.keys())
         for key in keys:
             if key.startswith(self.identifier):
-                dataByIdentifier.pop(key)
+                dataByIdentifier.pop(key, None)
 
     def duplicate(self, sourceNode):
         self.collection = None
