@@ -1,6 +1,5 @@
 import bpy
 from bpy.props import *
-from animation_nodes . utils.depsgraph import getEvaluatedID
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 
 class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
@@ -10,12 +9,12 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
     errorHandlingType = "EXCEPTION"
     codeEffects = [VectorizedSocket.CodeEffect]
 
+    nodeDict = {}
+    nodeIndex = 0
+
     for attr in ["Object", "Active", "Enabled", "Threshold","Mass","Bounciness","Friction","LinearDamping",
                  "AngularDamping","EnableCollisionMargin","CollisionMargin","Collections"]:
         exec("use{}List: VectorizedSocket.newProperty()".format(attr), globals(), locals())
-
-    objectIndex = 0
-    enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = False, update = AnimationNode.refresh)
 
     def create(self):
         self.newInput(VectorizedSocket("Object", "useObjectList",
@@ -72,9 +71,38 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
             socket.hide = True
 
     def drawAdvanced(self, layout):
-        layout.prop(self, "enableDepsgraph")
+        col = layout.column()
+        self.invokeFunction(col, "invokeAddRigidBody",
+                            text="Add",
+                            description="Link objects to rigidbody world")
+
+        self.invokeFunction(col, "invokeRemoveRigidBody",
+                            text="Remove",
+                            description="Unlink objects from rigidbody world")
+
+    def invokeAddRigidBody(self):
+        objects = self.getStoredObjects()
+        addRigidBody(objects, True)
+
+    def invokeRemoveRigidBody(self):
+        objects = self.getStoredObjects()
+        addRigidBody(objects, False)
+
+    def getStoredObjects(self):
+        keys = list(self.nodeDict.keys())
+        objects = []
+        for key in keys:
+            if key.startswith(self.identifier):
+                objects.append(self.nodeDict.get(key))
+        return objects
+
+    def storeObjectToDict(self, data):
+        identifier = str(self.identifier) + str(self.nodeIndex)
+        self.nodeDict[identifier] = data
 
     def getExecutionCode(self, required):
+        yield "self.nodeIndex += 1"
+        yield "self.storeObjectToDict(object)"
         yield "rigid_body = self.getRigidBodyObject(object)"
         yield "if rigid_body is not None:"
         yield "    influence = self.evaluateFalloff(falloff, object)"
@@ -118,15 +146,45 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
 
     def evaluateFalloff(self, falloff, object):
         location = (0,0,0)
-        if self.enableDepsgraph:
-            location = getEvaluatedID(object).location
-        else:
-            location = object.location
+        location = object.location
         falloffEvaluator = self.getFalloffEvaluator(falloff)
-        influence = falloffEvaluator(location, self.objectIndex)
-        self.objectIndex += 1
+        influence = falloffEvaluator(location, self.nodeIndex)
         return influence
 
     def getFalloffEvaluator(self, falloff):
         try: return falloff.getEvaluator("LOCATION")
         except: self.raiseErrorMessage("This falloff cannot be evaluated for vectors")
+
+    def delete(self):
+        keys = list(self.nodeDict.keys())
+        for key in keys:
+            if key.startswith(self.identifier):
+                self.nodeDict.pop(key)
+
+def addRigidBody(objects, activate):
+    try:
+        scene = bpy.context.scene
+        rigidBodyWorld = scene.rigidbody_world
+        if rigidBodyWorld is None:
+            bpy.ops.rigidbody.world_add()
+            rigidBodyWorld = scene.rigidbody_world
+        rigidBodyWorld.enabled = True
+
+        if rigidBodyWorld.collection is None:
+            newCollection = bpy.data.collections.new("RigidBodyWorld")
+            newCollection.use_fake_user = True
+            rigidBodyWorld.collection = newCollection
+
+        rigidBodyWorldObjects = rigidBodyWorld.collection.objects
+
+        for ob in objects:
+            if ob is None:
+                continue
+            if activate:
+                if ob.name not in rigidBodyWorldObjects:
+                    rigidBodyWorldObjects.link(ob)
+            else:
+                if ob.name in rigidBodyWorldObjects:
+                    rigidBodyWorldObjects.unlink(ob)
+    except:
+       print('False')
