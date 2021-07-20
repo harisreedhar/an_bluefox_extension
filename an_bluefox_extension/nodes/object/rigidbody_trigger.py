@@ -74,11 +74,13 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         col = layout.column()
         self.invokeFunction(col, "invokeAddRigidBody",
                             text="Add",
-                            description="Link objects to rigidbody world")
+                            description="Link objects to rigidbody world",
+                            icon = "ADD")
 
         self.invokeFunction(col, "invokeRemoveRigidBody",
                             text="Remove",
-                            description="Unlink objects from rigidbody world")
+                            description="Unlink objects from rigidbody world",
+                            icon = "REMOVE")
 
     def invokeAddRigidBody(self):
         objects = self.getStoredObjects()
@@ -180,11 +182,13 @@ def addRigidBody(objects, activate):
         for ob in objects:
             if ob is None:
                 continue
-            if activate:
-                if ob.name not in rigidBodyWorldObjects:
-                    rigidBodyWorldObjects.link(ob)
-            else:
-                if ob.name in rigidBodyWorldObjects:
-                    rigidBodyWorldObjects.unlink(ob)
+            if ob.type == 'MESH':
+                ob.data.update()
+                if activate:
+                    if ob.name not in rigidBodyWorldObjects:
+                        rigidBodyWorldObjects.link(ob)
+                else:
+                    if ob.name in rigidBodyWorldObjects:
+                        rigidBodyWorldObjects.unlink(ob)
     except:
        print('False')
