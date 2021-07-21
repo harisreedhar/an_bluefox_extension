@@ -61,37 +61,39 @@ cdef class Noise4DFalloff(BaseFalloff):
         self.dataType = "LOCATION"
 
     cdef float evaluate(self, void *value, Py_ssize_t index):
-        cdef Vector3* v = <Vector3*>value
-        v.x += self.offset.x
-        v.y += self.offset.y
-        v.z += self.offset.z
+        cdef Vector3* _v = <Vector3*>value
+        cdef Vector3 v
+        v.x = _v.x + self.offset.x
+        v.y = _v.y + self.offset.y
+        v.z = _v.z + self.offset.z
 
         if self.periodic:
-            return fractalPNoise(v, self.w,
+            return fractalPNoise(&v, self.w,
                         self.px, self.py, self.pz, self.pw,
                         self.amplitude, self.frequency, self.octaves)
-        return fractalNoise(v, self.w,
+        return fractalNoise(&v, self.w,
                     self.amplitude, self.frequency, self.octaves)
 
     cdef void evaluateList(self, void *values, Py_ssize_t startIndex,
                            Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
-        cdef Vector3* v
+        cdef Vector3* _v
+        cdef Vector3 v
 
         if self.periodic:
             for i in range(amount):
-                v = <Vector3*>values + i
-                v.x += self.offset.x
-                v.y += self.offset.y
-                v.z += self.offset.z
-                target[i] = fractalPNoise(v, self.w,
+                _v = <Vector3*>values + i
+                v.x = _v.x + self.offset.x
+                v.y = _v.y + self.offset.y
+                v.z = _v.z + self.offset.z
+                target[i] = fractalPNoise(&v, self.w,
                                 self.px, self.py, self.pz, self.pw,
                                 self.amplitude, self.frequency, self.octaves)
         else:
             for i in range(amount):
-                v = <Vector3*>values + i
-                v.x += self.offset.x
-                v.y += self.offset.y
-                v.z += self.offset.z
-                target[i] = fractalNoise(v, self.w,
+                _v = <Vector3*>values + i
+                v.x = _v.x + self.offset.x
+                v.y = _v.y + self.offset.y
+                v.z = _v.z + self.offset.z
+                target[i] = fractalNoise(&v, self.w,
                                 self.amplitude, self.frequency, self.octaves)
