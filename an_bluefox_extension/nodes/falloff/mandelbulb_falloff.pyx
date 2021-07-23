@@ -64,29 +64,31 @@ cdef class MandelBulbFalloff(BaseFalloff):
 cdef inline float calcShapeStrength(MandelBulbFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
+
     cdef int i
-    cdef float distance = 0
     cdef float n = self.n
-    cdef float r, theta, phi, power, psint, tn, xxyy
+    cdef float xxyy, ntheta, nphi, power, psint
+    cdef float xxyyzz = 0
     cdef float x = p.x
     cdef float y = p.y
     cdef float z = p.z
 
     for i in range(self.iteration):
         xxyy = x*x + y*y
-        r = xxyy + z*z
-        theta = atan2(sqrt(xxyy), z) + self.phase
-        phi = atan2(y, x)
-        power = r**self.power
-        tn = theta * n
-        psint = power * sin(tn)
+        xxyyzz = xxyy + z*z
 
-        x = psint * cos(phi * n) + p.x
-        y = psint * sin(phi * n) + p.y
-        z = power * cos(tn) + p.z
+        if xxyyzz > n:
+            break
 
-    distance = x*x + y*y + z*z
+        ntheta = n * (atan2(sqrt(xxyy), z) + self.phase)
+        nphi = n * atan2(y, x)
+        power = (xxyyzz) ** self.power
+        psint = power * sin(ntheta)
 
-    if distance <= self.minDistance: return 1
-    if distance <= self.maxDistance: return 1 - (distance - self.minDistance) * self.factor
+        x = psint * cos(nphi) + p.x
+        y = psint * sin(nphi) + p.y
+        z = power * cos(ntheta) + p.z
+
+    if xxyyzz <= self.minDistance: return 1
+    if xxyyzz <= self.maxDistance: return 1 - (xxyyzz - self.minDistance) * self.factor
     return 0
