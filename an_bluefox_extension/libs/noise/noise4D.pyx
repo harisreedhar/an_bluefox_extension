@@ -1,6 +1,9 @@
-from libc . math cimport abs
-from animation_nodes . math cimport Vector3
+from . common cimport fastFloor, lerp
+from libc . math cimport abs, fabs, sqrt
+from animation_nodes . math cimport Vector3, Vector4
+from . common cimport fastFloor, lerp, addV4, mulV4_single, subV4, floorV4, hash44
 from animation_nodes . data_structures cimport FloatList, DoubleList, Vector3DList, VirtualDoubleList, VirtualVector3DList
+
 
 # https://github.com/stegu/perlin-noise/blob/master/src/noise1234.c
 
@@ -33,12 +36,6 @@ perm[:] = [151,160,137,91,90,15,
   49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
   138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
 ]
-
-cdef int fastFloor(float x):
-    return <int>x if <int>x < x else <int>x-1
-
-cdef float lerp(float t, float a, float b):
-    return (a) + (t) * (b-a)
 
 cdef float fade(float t):
     return t * t * t * (t * (t * 6 - 15) + 10)
@@ -212,9 +209,9 @@ cdef float pnoise4(Vector3* vec, float w, int px, int py, int pz, int pw):
 
     return 0.87 * lerp(s, n0, n1)
 
-####################################### 4D fractal noise #######################################
+####################################### 4D fractal perlin noise #######################################
 
-cdef float fractalNoise(Vector3* v, float w, float amplitude, float frequency, int octaves):
+cdef float perlin4D_Single(Vector3* v, float w, float amplitude, float frequency, int octaves):
     cdef float value = 0
     cdef int i
     cdef Vector3 temp
@@ -232,8 +229,15 @@ cdef float fractalNoise(Vector3* v, float w, float amplitude, float frequency, i
         amplitude *= 0.5
     return value
 
-cdef float fractalPNoise(Vector3* v, float w, int px, int py, int pz, int pw,
-                    float amplitude, float frequency, int octaves):
+cdef float periodicPerlin4D_Single(Vector3* v,
+                                   float w,
+                                   int px,
+                                   int py,
+                                   int pz,
+                                   int pw,
+                                   float amplitude,
+                                   float frequency,
+                                   int octaves):
     cdef float value = 0
     cdef int i
     cdef Vector3 temp
@@ -251,27 +255,112 @@ cdef float fractalPNoise(Vector3* v, float w, int px, int py, int pz, int pw,
         amplitude *= 0.5
     return value
 
-def noise4D(VirtualVector3DList vectors, VirtualDoubleList w,
-        Py_ssize_t amount,
-        float amplitude, float frequency, int octaves,
-        int pX, int pY, int pZ, int pW,
-        bint periodic = False):
+def perlin4D_List(VirtualVector3DList vectors,
+                  VirtualDoubleList w,
+                  Py_ssize_t amount,
+                  float amplitude,
+                  float frequency,
+                  int octaves):
+
+    cdef Py_ssize_t i
+    cdef FloatList output = FloatList(length = amount)
+    for i in range(amount):
+        output.data[i] = perlin4D_Single(vectors.get(i), w.get(i), amplitude, frequency, octaves)
+    return output
+
+def periodicPerlin4D_List(VirtualVector3DList vectors,
+                          VirtualDoubleList w,
+                          Py_ssize_t amount,
+                          float amplitude,
+                          float frequency,
+                          int octaves,
+                          int pX,
+                          int pY,
+                          int pZ,
+                          int pW):
 
     cdef Py_ssize_t i
     cdef FloatList output = FloatList(length = amount)
 
-    if periodic:
-        pX = max(abs(pX), 1)
-        pY = max(abs(pY), 1)
-        pZ = max(abs(pZ), 1)
-        pW = max(abs(pW), 1)
-
-        for i in range(amount):
-            output.data[i] = fractalPNoise(vectors.get(i), w.get(i),
-                                pX, pY, pZ, pW, amplitude, frequency, octaves)
-        return output
+    pX = max(abs(pX), 1)
+    pY = max(abs(pY), 1)
+    pZ = max(abs(pZ), 1)
+    pW = max(abs(pW), 1)
 
     for i in range(amount):
-        output.data[i] = fractalNoise(vectors.get(i), w.get(i),
-                            amplitude, frequency, octaves)
+        output.data[i] = periodicPerlin4D_Single(vectors.get(i), w.get(i), pX, pY, pZ, pW, amplitude, frequency, octaves)
+    return output
+
+####################################### Voronoi 4D Noise #######################################
+
+cdef float distanceV4(Vector4 a, Vector4 b, float exp, str method):
+    cdef:
+        float diff1 = (a.x - b.x)
+        float diff2 = (a.y - b.y)
+        float diff3 = (a.z - b.z)
+        float diff4 = (a.w - b.w)
+
+    if method == 'EUCLIDEAN':
+        return sqrt(diff1*diff1 + diff2*diff2 + diff3*diff3 + diff4*diff4)
+    elif method == 'MANHATTAN':
+        return fabs(diff1) + fabs(diff2) + fabs(diff3) + fabs(diff4)
+    elif method == 'CHEBYCHEV':
+        return max(fabs(diff1), max(fabs(diff2), max(fabs(diff3), fabs(diff4))))
+    elif method == 'MINKOWSKI':
+        if exp == 0: return 0
+        return (fabs(diff1)**exp + fabs(diff2)**exp + fabs(diff3)**exp + fabs(diff4)**exp) ** (1/exp)
+    else:
+        return 0
+
+cdef float voronoi4D_F1(Vector4 coord, float randomness, float exponent, str method):
+    cdef:
+        Vector4 cellPosition = floorV4(coord)
+        Vector4 localPosition = subV4(coord, cellPosition)
+
+    cdef:
+        Py_ssize_t u, k, j, i
+        Vector4 cellOffset, pointPosition
+        float distanceToPoint
+        float minDistance = 8
+
+    for u in range(-1, 2):
+        for k in range(-1, 2):
+            for j in range(-1, 2):
+                for i in range(-1, 2):
+                    cellOffset = Vector4(i, j, k, u)
+                    pointPosition = addV4(cellOffset, mulV4_single(hash44(addV4(cellPosition, cellOffset)), randomness))
+                    distanceToPoint = distanceV4(pointPosition, localPosition, exponent, method)
+                    if distanceToPoint < minDistance:
+                        minDistance = distanceToPoint
+    return minDistance
+
+cdef float voronoi4D_Single(Vector3* vector,
+                            float w,
+                            float amplitude,
+                            float frequency,
+                            float randomness,
+                            float exponent,
+                            str distanceMethod):
+
+    cdef Vector4 point
+    point.x = vector.x * frequency
+    point.y = vector.y * frequency
+    point.z = vector.z * frequency
+    point.w = w * frequency
+    return voronoi4D_F1(point, randomness, exponent, distanceMethod) * amplitude
+
+
+def voronoi4D_List(VirtualVector3DList vectors,
+                   VirtualDoubleList w,
+                   Py_ssize_t amount,
+                   float amplitude,
+                   float frequency,
+                   float randomness,
+                   float exponent,
+                   str distanceMethod):
+
+    cdef Py_ssize_t i
+    cdef FloatList output = FloatList(length = amount)
+    for i in range(amount):
+        output.data[i] = voronoi4D_Single(vectors.get(i), w.get(i), amplitude, frequency, randomness, exponent, distanceMethod)
     return output
