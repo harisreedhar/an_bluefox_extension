@@ -84,23 +84,15 @@ cdef class Perlin4DFalloff(BaseFalloff):
 
     cdef float evaluate(self, void *value, Py_ssize_t index):
         cdef Vector3* _v = <Vector3*>value
-        cdef Vector3 v
-        v.x = _v.x + self.offset.x
-        v.y = _v.y + self.offset.y
-        v.z = _v.z + self.offset.z
-        return perlin4D_Single(&v, self.w, self.amplitude, self.frequency, self.octaves)
+        return perlin4D_Single(_v, self.w, self.amplitude, self.frequency, self.offset, self.octaves)
 
     cdef void evaluateList(self, void *values, Py_ssize_t startIndex,
                            Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
         cdef Vector3* _v
-        cdef Vector3 v
         for i in range(amount):
             _v = <Vector3*>values + i
-            v.x = _v.x + self.offset.x
-            v.y = _v.y + self.offset.y
-            v.z = _v.z + self.offset.z
-            target[i] = perlin4D_Single(&v, self.w, self.amplitude, self.frequency, self.octaves)
+            target[i] = perlin4D_Single(_v, self.w, self.amplitude, self.frequency, self.offset, self.octaves)
 
 cdef class PeriodicPerlin4DFalloff(BaseFalloff):
     cdef:
@@ -123,11 +115,7 @@ cdef class PeriodicPerlin4DFalloff(BaseFalloff):
 
     cdef float evaluate(self, void *value, Py_ssize_t index):
         cdef Vector3* _v = <Vector3*>value
-        cdef Vector3 v
-        v.x = _v.x + self.offset.x
-        v.y = _v.y + self.offset.y
-        v.z = _v.z + self.offset.z
-        return periodicPerlin4D_Single(&v,
+        return periodicPerlin4D_Single(_v,
                                        self.w,
                                        self.px,
                                        self.py,
@@ -135,20 +123,17 @@ cdef class PeriodicPerlin4DFalloff(BaseFalloff):
                                        self.pw,
                                        self.amplitude,
                                        self.frequency,
+                                       self.offset,
                                        self.octaves)
 
     cdef void evaluateList(self, void *values, Py_ssize_t startIndex,
                            Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
         cdef Vector3* _v
-        cdef Vector3 v
 
         for i in range(amount):
             _v = <Vector3*>values + i
-            v.x = _v.x + self.offset.x
-            v.y = _v.y + self.offset.y
-            v.z = _v.z + self.offset.z
-            target[i] = periodicPerlin4D_Single(&v,
+            target[i] = periodicPerlin4D_Single(_v,
                                                 self.w,
                                                 self.px,
                                                 self.py,
@@ -156,6 +141,7 @@ cdef class PeriodicPerlin4DFalloff(BaseFalloff):
                                                 self.pw,
                                                 self.amplitude,
                                                 self.frequency,
+                                                self.offset,
                                                 self.octaves)
 
 cdef class Voronoi4DFalloff(BaseFalloff):
@@ -177,14 +163,11 @@ cdef class Voronoi4DFalloff(BaseFalloff):
 
     cdef float evaluate(self, void *value, Py_ssize_t index):
         cdef Vector3* _v = <Vector3*>value
-        cdef Vector3 point
-        point.x = _v.x + self.offset.x
-        point.y = _v.y + self.offset.y
-        point.z = _v.z + self.offset.z
-        return voronoi4D_Single(&point,
+        return voronoi4D_Single(_v,
                                 self.w,
                                 self.amplitude,
                                 self.frequency,
+                                self.offset,
                                 self.randomness,
                                 self.exponent,
                                 self.distanceMethod)
@@ -193,16 +176,13 @@ cdef class Voronoi4DFalloff(BaseFalloff):
                            Py_ssize_t amount, float *target):
         cdef Py_ssize_t i
         cdef Vector3* _v
-        cdef Vector3 point
         for i in range(amount):
             _v = <Vector3*>values + i
-            point.x = _v.x + self.offset.x
-            point.y = _v.y + self.offset.y
-            point.z = _v.z + self.offset.z
-            target[i] = voronoi4D_Single(&point,
+            target[i] = voronoi4D_Single(_v,
                                          self.w,
                                          self.amplitude,
                                          self.frequency,
+                                         self.offset,
                                          self.randomness,
                                          self.exponent,
                                          self.distanceMethod)

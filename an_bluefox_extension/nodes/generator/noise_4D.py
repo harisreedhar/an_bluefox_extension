@@ -24,7 +24,7 @@ class BF_Noise4DNode(bpy.types.Node, AnimationNode):
     distanceMethod: EnumProperty(name = "Distance Method", items = voronoiDistanceTypeItems, update = AnimationNode.refresh)
 
     def create(self):
-        self.newInput("Vector List", "Vectors", "vectors", dataIsModified = True)
+        self.newInput("Vector List", "Vectors", "vectors")
         self.newInput(VectorizedSocket("Float", "useWList", ("W", "w"), ("Ws", "w")))
         self.newInput("Float", "Amplitude", "amplitude", value = 1)
         self.newInput("Float", "Frequency", "frequency", value = 0.1)
@@ -49,17 +49,16 @@ class BF_Noise4DNode(bpy.types.Node, AnimationNode):
             layout.prop(self, "distanceMethod", text = "")
 
     def getExecutionCode(self, required):
-        yield "vectors.transform(Matrix.Translation(offset))"
         yield "_vectors = VirtualVector3DList.create(vectors, (0,0,0))"
         yield "_w = VirtualDoubleList.create(w, 0)"
         yield "amount = VirtualVector3DList.getMaxRealLength(_vectors, _w)"
         yield "noise = an_bluefox_extension.libs.noise"
         if self.noiseType == 'PERLIN':
-            yield "values = DoubleList.fromValues(noise.perlin4D_List(_vectors, _w, amount, amplitude, frequency, octaves))"
+            yield "values = DoubleList.fromValues(noise.perlin4D_List(_vectors, _w, amount, amplitude, frequency, offset, octaves))"
         elif self.noiseType == 'PERIODIC_PERLIN':
-            yield "values = DoubleList.fromValues(noise.periodicPerlin4D_List(_vectors, _w, amount, amplitude, frequency, octaves, px, py, pz, pw))"
+            yield "values = DoubleList.fromValues(noise.periodicPerlin4D_List(_vectors, _w, amount, amplitude, frequency, offset, octaves, px, py, pz, pw))"
         elif self.noiseType == 'VORONOI':
-            yield "values = DoubleList.fromValues(noise.voronoi4D_List(_vectors, _w, amount, amplitude, frequency, randomness, exponent, self.distanceMethod))"
+            yield "values = DoubleList.fromValues(noise.voronoi4D_List(_vectors, _w, amount, amplitude, frequency, offset, randomness, exponent, self.distanceMethod))"
 
     def getUsedModules(self):
         return ['an_bluefox_extension']
