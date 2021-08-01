@@ -49,7 +49,7 @@ cdef float grad4(int hash, float x, float y, float z, float t):
 
 #################################### 4D perlin noise ####################################
 
-cdef float noise4(Vector3* vec, float w):
+cdef float noise4(Vector4* vec):
     cdef:
         int ix0, iy0, iz0, iw0, ix1, iy1, iz1, iw1
         float fx0, fy0, fz0, fw0, fx1, fy1, fz1, fw1
@@ -59,11 +59,11 @@ cdef float noise4(Vector3* vec, float w):
     ix0 = fastFloor(vec.x)
     iy0 = fastFloor(vec.y)
     iz0 = fastFloor(vec.z)
-    iw0 = fastFloor(w)
+    iw0 = fastFloor(vec.w)
     fx0 = vec.x - ix0
     fy0 = vec.y - iy0
     fz0 = vec.z - iz0
-    fw0 = w - iw0
+    fw0 = vec.w - iw0
     fx1 = fx0 - 1.0
     fy1 = fy0 - 1.0
     fz1 = fz0 - 1.0
@@ -130,7 +130,7 @@ cdef float noise4(Vector3* vec, float w):
 
 ################################# 4D periodic perlin noise #################################
 
-cdef float pnoise4(Vector3* vec, float w, int px, int py, int pz, int pw):
+cdef float pnoise4(Vector4* vec, int px, int py, int pz, int pw):
     cdef:
         int ix0, iy0, iz0, iw0, ix1, iy1, iz1, iw1
         float fx0, fy0, fz0, fw0, fx1, fy1, fz1, fw1
@@ -140,11 +140,11 @@ cdef float pnoise4(Vector3* vec, float w, int px, int py, int pz, int pw):
     ix0 = fastFloor(vec.x)
     iy0 = fastFloor(vec.y)
     iz0 = fastFloor(vec.z)
-    iw0 = fastFloor(w)
+    iw0 = fastFloor(vec.w)
     fx0 = vec.x - ix0
     fy0 = vec.y - iy0
     fz0 = vec.z - iz0
-    fw0 = w - iw0
+    fw0 = vec.w - iw0
     fx1 = fx0 - 1.0
     fy1 = fy0 - 1.0
     fz1 = fz0 - 1.0
@@ -211,22 +211,28 @@ cdef float pnoise4(Vector3* vec, float w, int px, int py, int pz, int pw):
 
 ####################################### 4D fractal perlin noise #######################################
 
-cdef float perlin4D_Single(Vector3* v, float w, float amplitude, float frequency, Vector3 offset, int octaves):
-    cdef float value = 0
+cdef float perlin4D_Single(Vector3* v,
+                           float w,
+                           float amplitude,
+                           float frequency,
+                           Vector3 offset,
+                           int octaves,
+                           float lacunarity,
+                           float persistance):
     cdef int i
-    cdef Vector3 temp
-    cdef float tempW
+    cdef Vector4 temp
+    cdef float value = 0
     temp.x = (v.x * frequency) + offset.x
     temp.y = (v.y * frequency) + offset.y
     temp.z = (v.z * frequency) + offset.z
-    tempW = frequency + w
+    temp.w = frequency + w
     for i in range(octaves):
-        value += amplitude * noise4(&temp, tempW)
-        temp.x *= 2
-        temp.y *= 2
-        temp.z *= 2
-        tempW *= 2
-        amplitude *= 0.5
+        value += amplitude * noise4(&temp)
+        temp.x *= lacunarity
+        temp.y *= lacunarity
+        temp.z *= lacunarity
+        temp.w *= lacunarity
+        amplitude *= persistance
     return value
 
 cdef float periodicPerlin4D_Single(Vector3* v,
@@ -238,63 +244,24 @@ cdef float periodicPerlin4D_Single(Vector3* v,
                                    float amplitude,
                                    float frequency,
                                    Vector3 offset,
-                                   int octaves):
-    cdef float value = 0
+                                   int octaves,
+                                   float lacunarity,
+                                   float persistance):
     cdef int i
-    cdef Vector3 temp
-    cdef float tempW
+    cdef Vector4 temp
+    cdef float value = 0
     temp.x = (v.x * frequency) + offset.x
     temp.y = (v.y * frequency) + offset.y
     temp.z = (v.z * frequency) + offset.z
-    tempW = frequency + w
+    temp.w = frequency + w
     for i in range(octaves):
-        value += amplitude * pnoise4(&temp, tempW, px, py, pz, pw)
-        temp.x *= 2
-        temp.y *= 2
-        temp.z *= 2
-        tempW *= 2
-        amplitude *= 0.5
+        value += amplitude * pnoise4(&temp, px, py, pz, pw)
+        temp.x *= lacunarity
+        temp.y *= lacunarity
+        temp.z *= lacunarity
+        temp.w *= lacunarity
+        amplitude *= persistance
     return value
-
-def perlin4D_List(VirtualVector3DList vectors,
-                  VirtualDoubleList w,
-                  Py_ssize_t amount,
-                  float amplitude,
-                  float frequency,
-                  offset,
-                  int octaves):
-
-    cdef Py_ssize_t i
-    cdef FloatList output = FloatList(length = amount)
-    cdef Vector3 _offset = Vector3(offset.x, offset.y, offset.z)
-    for i in range(amount):
-        output.data[i] = perlin4D_Single(vectors.get(i), w.get(i), amplitude, frequency, _offset, octaves)
-    return output
-
-def periodicPerlin4D_List(VirtualVector3DList vectors,
-                          VirtualDoubleList w,
-                          Py_ssize_t amount,
-                          float amplitude,
-                          float frequency,
-                          offset,
-                          int octaves,
-                          int pX,
-                          int pY,
-                          int pZ,
-                          int pW):
-
-    cdef Py_ssize_t i
-    cdef FloatList output = FloatList(length = amount)
-    cdef Vector3 _offset = Vector3(offset.x, offset.y, offset.z)
-
-    pX = max(abs(pX), 1)
-    pY = max(abs(pY), 1)
-    pZ = max(abs(pZ), 1)
-    pW = max(abs(pW), 1)
-
-    for i in range(amount):
-        output.data[i] = periodicPerlin4D_Single(vectors.get(i), w.get(i), pX, pY, pZ, pW, amplitude, frequency, _offset, octaves)
-    return output
 
 ####################################### Voronoi 4D Noise #######################################
 
@@ -355,6 +322,69 @@ cdef float voronoi4D_Single(Vector3* vector,
     point.w = frequency + w
     return voronoi4D_F1(point, randomness, exponent, distanceMethod) * amplitude
 
+############################## Python functions #####################################
+
+def perlin4D_List(VirtualVector3DList vectors,
+                  VirtualDoubleList w,
+                  Py_ssize_t amount,
+                  float amplitude,
+                  float frequency,
+                  offset,
+                  int octaves,
+                  float lacunarity,
+                  float persistance):
+
+    cdef Py_ssize_t i
+    cdef FloatList output = FloatList(length = amount)
+    cdef Vector3 _offset = Vector3(offset.x, offset.y, offset.z)
+    for i in range(amount):
+        output.data[i] = perlin4D_Single(vectors.get(i),
+                                         w.get(i),
+                                         amplitude,
+                                         frequency,
+                                         _offset,
+                                         octaves,
+                                         lacunarity,
+                                         persistance)
+    return output
+
+def periodicPerlin4D_List(VirtualVector3DList vectors,
+                          VirtualDoubleList w,
+                          Py_ssize_t amount,
+                          float amplitude,
+                          float frequency,
+                          offset,
+                          int octaves,
+                          float lacunarity,
+                          float persistance,
+                          int pX,
+                          int pY,
+                          int pZ,
+                          int pW):
+
+    cdef Py_ssize_t i
+    cdef FloatList output = FloatList(length = amount)
+    cdef Vector3 _offset = Vector3(offset.x, offset.y, offset.z)
+
+    pX = max(abs(pX), 1)
+    pY = max(abs(pY), 1)
+    pZ = max(abs(pZ), 1)
+    pW = max(abs(pW), 1)
+
+    for i in range(amount):
+        output.data[i] = periodicPerlin4D_Single(vectors.get(i),
+                                                 w.get(i),
+                                                 pX,
+                                                 pY,
+                                                 pZ,
+                                                 pW,
+                                                 amplitude,
+                                                 frequency,
+                                                 _offset,
+                                                 octaves,
+                                                 lacunarity,
+                                                 persistance)
+    return output
 
 def voronoi4D_List(VirtualVector3DList vectors,
                    VirtualDoubleList w,
@@ -370,5 +400,12 @@ def voronoi4D_List(VirtualVector3DList vectors,
     cdef FloatList output = FloatList(length = amount)
     cdef Vector3 _offset = Vector3(offset.x, offset.y, offset.z)
     for i in range(amount):
-        output.data[i] = voronoi4D_Single(vectors.get(i), w.get(i), amplitude, frequency, _offset, randomness, exponent, distanceMethod)
+        output.data[i] = voronoi4D_Single(vectors.get(i),
+                                          w.get(i),
+                                          amplitude,
+                                          frequency,
+                                          _offset,
+                                          randomness,
+                                          exponent,
+                                          distanceMethod)
     return output
