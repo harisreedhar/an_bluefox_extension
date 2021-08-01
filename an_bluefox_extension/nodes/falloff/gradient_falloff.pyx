@@ -29,22 +29,27 @@ class BF_GradientFalloffNode(bpy.types.Node, AnimationNode):
 
     def create(self):
         self.newInput("Matrix", "Matrix", "matrix")
+        self.newInput("Float", "Size", "size", value = 0.25)
+        self.newInput("Float", "Falloff Width", "falloffWidth", value = 1)
         self.newOutput("Falloff", "Falloff", "falloff")
 
     def draw(self, layout):
         layout.prop(self, "gradientType", text = "")
 
-    def execute(self, matrix):
+    def execute(self, matrix, size, falloffWidth):
         invertedMatrix = matrix.inverted(Matrix.Identity(4))
-        return GradientFalloff(invertedMatrix, self.gradientType)
+        return GradientFalloff(invertedMatrix, size, falloffWidth, self.gradientType)
 
 cdef class GradientFalloff(BaseFalloff):
     cdef:
         Matrix4 origin
+        float size, falloffWidth
         str gradientType
 
-    def __cinit__(self, origin, str gradientType):
+    def __cinit__(self, origin, float size, float falloffWidth, str gradientType):
         setMatrix4(&self.origin, origin)
+        self.size = size
+        self.falloffWidth = falloffWidth
         self.gradientType = gradientType
         self.dataType = "LOCATION"
 
@@ -90,45 +95,56 @@ cdef class GradientFalloff(BaseFalloff):
             for i in range(amount):
                 target[i] = spherical(self, <Vector3*>values + i)
 
-cdef float clampFloat(float value):
-    return min(max(value, 0), 1)
 
 cdef inline float linear(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
-    return clampFloat(p.x)
+    return setFalloffSize(p.x, self.size, self.falloffWidth)
 
 cdef inline float quadratic(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
     cdef float r = max(p.x, 0)
-    return clampFloat(r * r)
+    return setFalloffSize(r * r, self.size, self.falloffWidth)
 
 cdef inline float easing(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
     cdef float r = min(max(p.x, 0), 1)
     cdef float t = r * r
-    return clampFloat(3.0 * t - 2.0 * t * r)
+    return setFalloffSize(3.0 * t - 2.0 * t * r, self.size, self.falloffWidth)
 
 cdef inline float diagonal(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
-    return clampFloat((p.x + p.y) * 0.5)
+    return setFalloffSize(((p.x + p.y) * 0.5), self.size, self.falloffWidth)
 
 cdef inline float radial(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
-    return clampFloat(atan2(p.y, p.x) / M_2_PI + 0.5)
+    return setFalloffSize((atan2(p.y, p.x) / M_2_PI + 0.5), self.size, self.falloffWidth)
 
 cdef inline float quadraticSphere(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
-    cdef float r = max(1.0 - sqrt(p.x * p.x + p.y * p.y + p.z * p.z), 0.0)
-    return clampFloat(r * r)
+    cdef float r = sqrt(p.x * p.x + p.y * p.y + p.z * p.z)
+    return setFalloffSize(r*r, self.size, self.falloffWidth)
 
 cdef inline float spherical(GradientFalloff self, Vector3 *v):
     cdef Vector3 p
     transformVec3AsPoint(&p, v, &self.origin)
-    cdef float r = max(1.0 - sqrt(p.x * p.x + p.y * p.y + p.z * p.z), 0.0)
-    return clampFloat(r)
+    cdef float r  = sqrt(p.x * p.x + p.y * p.y + p.z * p.z)
+    return setFalloffSize(r, self.size, self.falloffWidth)
+
+cdef inline float setFalloffSize(float value, float size, float falloffWidth):
+    if falloffWidth < 0:
+        size += falloffWidth
+        falloffWidth = -falloffWidth
+    cdef float minValue = size
+    cdef float maxValue = size + falloffWidth
+    if minValue == maxValue:
+        minValue -= 0.00001
+    cdef float factor = 1 / (maxValue - minValue)
+    if value <= minValue: return 1
+    if value <= maxValue: return 1 - (value - minValue) * factor
+    return 0
