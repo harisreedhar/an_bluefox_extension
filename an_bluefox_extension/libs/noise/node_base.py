@@ -11,8 +11,7 @@ noiseTypeItems = [
 distanceTypeItems = [
     ("EUCLIDEAN", "Euclidean", "", "", 0),
     ("MANHATTAN", "Manhattan", "", "", 1),
-    ("CHEBYCHEV", "Chebychev", "", "", 2),
-    ("MINKOWSKI", "Minkowski", "", "", 3),
+    ("CHEBYCHEV", "Chebychev", "", "", 2)
 ]
 
 class Noise4DNodeBase:
@@ -20,6 +19,7 @@ class Noise4DNodeBase:
     distanceMethod: EnumProperty(name = "Distance Method", items = distanceTypeItems, update = AnimationNode.refresh)
 
     def createInputs(self):
+        self.newInput("Float", "W", "w")
         self.newInput("Float", "Amplitude", "amplitude", value = 1)
         self.newInput("Float", "Frequency", "frequency", value = 0.1)
         self.newInput("Vector", "Offset", "offset")
@@ -37,7 +37,6 @@ class Noise4DNodeBase:
 
         if self.noiseType == 'VORONOI':
             self.newInput("Float", "Randomness", "randomness", value = 1, minValue = 0, maxValue = 1)
-            self.newInput("Float", "Exponent", "exponent", value = 2)
 
     def drawNoiseSettings(self, layout):
         layout.prop(self, "noiseType", text = "")

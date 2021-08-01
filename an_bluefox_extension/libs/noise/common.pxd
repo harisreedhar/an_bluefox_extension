@@ -1,4 +1,4 @@
-from animation_nodes . math cimport Vector4
+from animation_nodes . math cimport Vector4, Vector3
 from libc . math cimport fabs, floor, sqrt
 
 cdef inline int fastFloor(float x):
@@ -55,7 +55,7 @@ cdef inline Vector4 hash44(Vector4 p4):
                  fract(p4.z * 0.0973),
                  fract(p4.w * 0.1099))
 
-    cdef float dot = p4.x*p4.w+33.33 + p4.y*p4.z+33.33 + p4.z*p4.x+33.33 + p4.w*p4.y+33.33
+    cdef float dot = p4.x*p4.w + p4.y*p4.z + p4.z*p4.x + p4.w*p4.y + 133.32
     p4.x += dot
     p4.y += dot
     p4.z += dot
@@ -65,3 +65,9 @@ cdef inline Vector4 hash44(Vector4 p4):
                    fract((p4.x + p4.z) * p4.y),
                    fract((p4.y + p4.z) * p4.w),
                    fract((p4.z + p4.w) * p4.x))
+
+cdef inline void applyFrequencyOffset(Vector4* output, Vector3* point, float frequency, Vector4 offset):
+    output.x = (point.x * frequency) + offset.x
+    output.y = (point.y * frequency) + offset.y
+    output.z = (point.z * frequency) + offset.z
+    output.w = frequency + offset.w
