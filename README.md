@@ -35,4 +35,6 @@ Install like any other blender addon (`blender -> Edit -> Preferences -> Add-ons
 - [Linux](https://github.com/harisreedhar/an_bluefox_extension/releases/download/2.93-cd-build/an_bluefox_extension_v1_1_linux_py39.zip)
 - [Mac](https://github.com/harisreedhar/an_bluefox_extension/releases/download/2.93-cd-build/an_bluefox_extension_v1_1_macOS_py39.zip)
 - [Windows](https://github.com/harisreedhar/an_bluefox_extension/releases/download/2.93-cd-build/an_bluefox_extension_v1_1_windows_py39.zip)
+### Download Latest
+- [WIP](https://github.com/harisreedhar/an_bluefox_extension/releases/tag/master-cd-build)
 
