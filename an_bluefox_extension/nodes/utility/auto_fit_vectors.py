@@ -23,6 +23,6 @@ class BF_AutoFitVectorsNode(bpy.types.Node, AnimationNode):
         nume = array - mins
         array = np.divide(nume, diff, out=np.zeros_like(nume), where=diff!=0)
         if alignCenter:
-            array -= np.mean(array, axis=0)
+            array -= 0.5
         array *= scale
         return Vector3DList.fromNumpyArray(array.ravel().astype('f'))
