@@ -16,11 +16,13 @@ class BF_AutoFitVectorsNode(bpy.types.Node, AnimationNode):
     def execute(self, vectors, scale, alignCenter):
         if len(vectors) == 0:
             return vectors
-        array = vectors.asNumpyArray()
+        array = vectors.asNumpyArray().reshape(-1,3)
+        mins = np.min(array, axis=0)
+        maxs = np.max(array, axis=0)
+        diff = maxs - mins
+        nume = array - mins
+        array = np.divide(nume, diff, out=np.zeros_like(nume), where=diff!=0)
         if alignCenter:
-            _array = array.reshape(-1,3)
-            _array -= np.mean(_array, axis = 0)
-            array = _array.ravel()
-        array /= np.max(np.abs(array))
+            array -= np.mean(array, axis=0)
         array *= scale
-        return Vector3DList.fromNumpyArray(array.astype('f'))
+        return Vector3DList.fromNumpyArray(array.ravel().astype('f'))
