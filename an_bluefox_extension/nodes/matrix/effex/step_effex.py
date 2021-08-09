@@ -13,7 +13,7 @@ class BF_StepEffexNode(bpy.types.Node, AnimationNode, EffexBase):
 
     def create(self):
         self.newInput("Matrix List", "Matrices", "matrices", dataIsModified = True)
-        self.newInput("Float", "Step", "step")
+        self.newInput("Float", "Step", "step", minValue = 0)
         self.createBasicInputs()
         self.newOutput("Matrix List", "Matrices", "matrices")
         self.newOutput("Float List", "Values", "effexValues", hide = True)
@@ -38,8 +38,8 @@ class BF_StepEffexNode(bpy.types.Node, AnimationNode, EffexBase):
 
     def getStepStrengths(self, amount, step):
         amount = max(1, amount)
-        array = np.linspace(0, 1, num = amount, dtype = np.float32)
-        if step != 0:
-            array = np.round_(array / step) * step
+        array = np.linspace(0, 1, num=amount, endpoint=False, dtype=np.float32)
+        if step > 0:
+            array = np.floor(array * step) / step
         strengths = FloatList.fromNumpyArray(array)
         return strengths

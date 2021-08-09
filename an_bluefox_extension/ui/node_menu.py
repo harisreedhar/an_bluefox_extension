@@ -9,6 +9,7 @@ class BluefoxExtensionMenu(bpy.types.Menu):
         layout = self.layout
         layout.menu("AN_MT_BF_Color_menu", text = "Color")
         layout.menu("AN_MT_BF_Falloff_menu", text = "Falloff")
+        layout.menu("AN_MT_BF_Generator_menu", text = "Generator")
         layout.menu("AN_MT_BF_Matrix_menu", text = "Matrix")
         layout.menu("AN_MT_BF_Mesh_menu", text = "Mesh")
         layout.menu("AN_MT_BF_Object_menu", text = "Object")
@@ -30,6 +31,7 @@ class BF_ColorMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_MagicColorsNode", "Magic Colors")
         insertNode(layout, "an_bf_MixRGB", "Mix RGB")
 
 class BF_FalloffMenu(bpy.types.Menu):
@@ -38,11 +40,23 @@ class BF_FalloffMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_BlendFalloffsNode", "Blend Falloffs")
+        insertNode(layout, "an_bf_GradientFalloffNode", "Gradient Falloff")
         insertNode(layout, "an_bf_MathFalloffNode", "Math Falloff")
         insertNode(layout, "an_bf_MandelBulbFalloffNode", "Mandelbulb Falloff")
         insertNode(layout, "an_bf_MemoryFalloffNode", "Memory Falloff")
+        insertNode(layout, "an_bf_Noise4DFalloffNode", "Noise 4D Falloff")
         insertNode(layout, "an_bf_ShapeFalloffNode", "Shape Falloff")
         insertNode(layout, "an_bf_wavefalloff", "Wave Falloff")
+
+class BF_GeneratorMenu(bpy.types.Menu):
+    bl_idname = "AN_MT_BF_Generator_menu"
+    bl_label = "Generator Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        insertNode(layout, "an_bf_ChaoticAttractorsNode", "Chaotic Attractors")
+        insertNode(layout, "an_bf_Noise4DNode", "Noise 4D")
 
 class BF_MatrixMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Matrix_menu"
@@ -76,6 +90,7 @@ class BF_ObjectMenu(bpy.types.Menu):
         insertNode(layout, "an_bf_DupliInstancer", "Dupli Instancer")
         insertNode(layout, "an_bf_ObjectFractureNode", "Object Fracture")
         insertNode(layout, "an_bf_RigidBodyTriggerNode", "Rigidbody Trigger")
+        insertNode(layout, "an_bf_SeparateLooseObjectsNode", "Separate Loose Objects")
 
 class BF_SplineMenu(bpy.types.Menu):
     bl_idname = "AN_MT_BF_Spline_menu"
@@ -91,7 +106,8 @@ class BF_UtilityMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        insertNode(layout, "an_bf_NormalizeFloatsNode", "Auto Normalize Floats")
+        insertNode(layout, "an_bf_AutoFitVectorsNode", "Auto Fit Vectors")
+        insertNode(layout, "an_bf_AutoFitFloatsNode", "Auto Fit Floats")
         insertNode(layout, "an_bf_SverchokInterfaceNode", "Sverchok Interface")
 
 def register():

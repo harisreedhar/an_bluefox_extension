@@ -4,16 +4,9 @@ from bpy.props import *
 from ... libs import skimage
 from ... utils.formula import evaluateFormula
 from . c_utils import polygonIndices_From_triArray
+from animation_nodes . data_structures import Vector3DList, Mesh
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 from animation_nodes . data_structures.meshes.validate import createValidEdgesList
-from animation_nodes . data_structures import (
-    LongList,
-    UIntegerList,
-    Vector3DList,
-    PolygonIndicesList,
-    EdgeIndicesList,
-    Mesh
-)
 
 fieldTypeItems = [
     ("FALLOFF", "Falloff", "Use falloff field", "", 0),
@@ -33,6 +26,8 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
     fieldType: EnumProperty(name = "Field Type", default = "FALLOFF",
         items = fieldTypeItems, update = AnimationNode.refresh)
 
+    ErrorOnTerminal: BoolProperty(name = "ErrorOnTerminal", default = False, update = AnimationNode.refresh)
+
     def create(self):
         if self.fieldType == "FALLOFF":
             self.newInput("Falloff", "Field", "field")
@@ -42,8 +37,9 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
                                         defaultDrawType = "PROPERTY_ONLY")
         else:
             self.newInput("Generic", "Field", "field")
-        self.newInput("Integer", "Samples","samples", minValue = 3, value = 10)
-        self.newInput("Float", "Scale Grid","scaleGrid", value = 1)
+        self.newInput("Integer", "X Divisions","xDivisions", minValue = 2, value = 10)
+        self.newInput("Integer", "Y Divisions","yDivisions", minValue = 2, value = 10)
+        self.newInput("Integer", "Z Divisions","zDivisions", minValue = 2, value = 10)
         self.newInput("Matrix", "Transform Grid","transform")
         self.newInput(VectorizedSocket("Float", "useThresholdList",
             ("Threshold", "threshold"),("Thresholds", "threshold")), value = 0.3, hide = True)
@@ -61,45 +57,49 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
     def draw(self, layout):
         layout.prop(self, "fieldType", text = "")
 
+    def drawAdvanced(self, layout):
+        layout.prop(self, "ErrorOnTerminal", text = "Show errors on terminal")
+
     def getExecutionCode(self, required):
-        yield "ds = AN.data_structures"
-        yield "mesh = ds.Mesh()"
-        yield "gridPoints = ds.Vector3DList()"
-        yield "normals = ds.Vector3DList()"
-        yield "values = ds.DoubleList()"
+        yield "mesh = Mesh()"
+        yield "gridPoints = Vector3DList()"
+        yield "normals = Vector3DList()"
+        yield "values = DoubleList()"
         if "mesh" in required:
             yield "try:"
-            yield "    boundingBox = ds.Vector3DList.fromNumpyArray(self.unityCube.ravel() * scaleGrid)"
+            yield "    boundingBox = Vector3DList.fromNumpyArray(self.unityCube.ravel())"
             yield "    boundingBox.transform(transform)"
-            yield "    mesh, grid, norm, val = self.generateMeshFromField(boundingBox, samples, field, threshold)"
+            yield "    mesh, grid, norm, val = self.generateMeshFromField(boundingBox, xDivisions, yDivisions, zDivisions, field, threshold)"
             if "gridPoints" in required:
-                yield "    gridPoints = ds.Vector3DList.fromNumpyArray(grid.ravel().astype('f'))"
+                yield "    gridPoints = Vector3DList.fromNumpyArray(grid.ravel().astype('f'))"
             if "normals" in required:
-                yield "    normals = ds.Vector3DList.fromNumpyArray(norm.ravel().astype('f'))"
+                yield "    normals = Vector3DList.fromNumpyArray(norm.ravel().astype('f'))"
             if "values" in required:
-                yield "    values = ds.DoubleList.fromNumpyArray(val.astype('float64'))"
+                yield "    values = DoubleList.fromNumpyArray(val.astype('float64'))"
             yield "except Exception as e:"
-            yield "    print('Marching Cubes error:', str(e))"
+            yield "    if self.ErrorOnTerminal:"
+            yield "        print('Marching Cubes error:', str(e))"
             yield "    self.raiseErrorMessage('Mesh generation failed')"
 
-    def generateMeshFromField(self, boundingBox, samples, field, threshold):
-        grid, minBound, maxBound = self.createGrid(boundingBox, samples)
-        volume = self.getField(field, grid).reshape((samples, samples, samples))
+    def generateMeshFromField(self, boundingBox, xDivisions, yDivisions, zDivisions, field, threshold):
+        grid, minBound, maxBound = self.createGrid(boundingBox, xDivisions, yDivisions, zDivisions)
+        volume = self.getField(field, grid).reshape((xDivisions, yDivisions, zDivisions))
         if not self.inputs[-1].isUsed:
             threshold = None
         vertArr, facesArr, normalArr, valueArr = skimage.marching_cubes(volume, level = threshold)
-        vertArr = ((vertArr / samples) * (maxBound - minBound) + minBound)
+        vertArr = ((vertArr / np.array([xDivisions, yDivisions, zDivisions])) * (maxBound - minBound) + minBound)
         vertices = Vector3DList.fromNumpyArray(vertArr.ravel().astype('f'))
         faces = polygonIndices_From_triArray(facesArr)
-        return self.createMesh(vertices, faces), grid, normalArr, valueArr
+        result = self.createMesh(vertices, faces), grid, normalArr, valueArr
+        return result
 
-    def createGrid(self, boundingBox, samples):
+    def createGrid(self, boundingBox, xDivisions, yDivisions, zDivisions):
         vs = boundingBox.asNumpyArray().reshape(-1,3)
         minBound = vs.min(axis=0)
         maxBound = vs.max(axis=0)
-        xRange = np.linspace(minBound[0], maxBound[0], num=samples)
-        yRange = np.linspace(minBound[1], maxBound[1], num=samples)
-        zRange = np.linspace(minBound[2], maxBound[2], num=samples)
+        xRange = np.linspace(minBound[0], maxBound[0], num=xDivisions)
+        yRange = np.linspace(minBound[1], maxBound[1], num=yDivisions)
+        zRange = np.linspace(minBound[2], maxBound[2], num=zDivisions)
         grid = np.vstack([np.meshgrid(xRange, yRange, zRange, indexing='ij')]).reshape(3,-1).T
         return grid, minBound, maxBound
 

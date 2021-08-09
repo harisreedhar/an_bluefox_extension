@@ -23,7 +23,7 @@ class BF_MemoryFalloffNode(bpy.types.Node, AnimationNode):
     outputFalloffList: BoolProperty(name = "Output Falloff List", default = False,
         update = AnimationNode.refresh)
     enableFade: BoolProperty(name = "Enable Fade", default = False, update = AnimationNode.refresh)
-    executionIndex = 0
+    nodeIndex = 0
 
     def create(self):
         self.newInput("Falloff", "Falloff", "falloff", dataIsModified = True)
@@ -61,8 +61,9 @@ class BF_MemoryFalloffNode(bpy.types.Node, AnimationNode):
                 yield "falloffOut = AN.nodes.falloff.mix_falloffs.MixFalloffs(result, self.mixMode)"
 
     def memoryFalloff(self, falloff, currentFrame, resetFrame, startFrame, length):
+        self.nodeIndex += 1
         try:
-            identifier = self.identifier + str(self.executionIndex)
+            identifier = self.identifier + str(self.nodeIndex)
             startFrame = max(0, currentFrame - startFrame)
             length = abs(length)
             index = max(0, min(length - 1, startFrame))
@@ -75,7 +76,6 @@ class BF_MemoryFalloffNode(bpy.types.Node, AnimationNode):
 
             falloffList = falloffCache.get(identifier)
             falloffList[index] = falloff
-            self.executionIndex += 1
             return falloffList
         except:
             return [falloff]
@@ -103,4 +103,4 @@ class BF_MemoryFalloffNode(bpy.types.Node, AnimationNode):
         keys = list(falloffCache.keys())
         for key in keys:
             if key.startswith(self.identifier):
-                falloffCache.pop(key)
+                falloffCache.pop(key, None)

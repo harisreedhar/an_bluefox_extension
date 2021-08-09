@@ -1,97 +1,127 @@
 import bpy
 from bpy.props import *
 from mathutils import Vector, Matrix
-from animation_nodes . base_types import AnimationNode
-from animation_nodes . utils.objects import enterObjectMode
-from animation_nodes . nodes.container_provider import getMainObjectContainer
-from animation_nodes . utils.blender_ui import executeInAreaType, iterActiveSpacesByType
+from animation_nodes . base_types import AnimationNode, VectorizedSocket
+from . object_utils import removeObjectsFromCollection, setOrigin, setIDKeys
 
-object_in = None
+dataByIdentifier = {}
 
 class BF_SeparateLooseObjectsNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_bf_SeparateLooseObjectsNode"
     bl_label = "Separate Loose Objects"
-    bl_width_default = 150
+    errorHandlingType = "EXCEPTION"
     options = {"NOT_IN_SUBPROGRAM"}
 
+    useObjectList  : VectorizedSocket.newProperty()
+
+    collection     : PointerProperty(type = bpy.types.Collection, description = "Output Collection", update = AnimationNode.refresh)
+    setObjectOrgin : BoolProperty(default = True, description = "", update = AnimationNode.refresh)
+    setObjectIDKey : BoolProperty(default = True, description = "", update = AnimationNode.refresh)
+    forceUpdateTree: BoolProperty(default = True, description = "", update = AnimationNode.refresh)
+
     def create(self):
-        self.newInput("Object", "Object", "object", defaultDrawType = "PROPERTY_ONLY")
+        self.newInput(VectorizedSocket("Object", "useObjectList",
+            ("Object", "object", dict(defaultDrawType = "PROPERTY_ONLY")),
+            ("Objects", "object")))
         self.newOutput("Object List", "Objects", "objects")
 
     def draw(self, layout):
-        self.invokeFunction(layout, "invokeSeparateFunction",
-            text = "Update",
-            description = "separate loose parts from the source object",
-            icon = "FILE_REFRESH")
+        col = layout.column()
+        col.scale_y = 1.5
+        self.invokeFunction(col, "invokeSeparateFunction",
+                            text="Update",
+                            description="Separate object by loose parts",
+                            icon="FILE_REFRESH")
+
+        col = layout.column(align = True)
+        row = col.row(align = True)
+        row.prop(self, "collection", text = "")
+        if self.collection is None:
+            self.invokeFunction(row, "createCollection",
+                                text="",
+                                description="Create new output collection",
+                                icon = "PLUS")
+
+    def drawAdvanced(self, layout):
+        layout.prop(self, "setObjectOrgin", text="Set origin to geometry center")
+        layout.prop(self, "setObjectIDKey", text="Set object ID keys")
+        layout.separator()
+        layout.prop(self, "forceUpdateTree", text="Force execute node tree")
 
     def execute(self, object):
-        global object_in
-        object_in = object
-
-        if object_in is None:
-            return []
-
-        collection = getCollection(self.getSubCollectionName())
+        objects = object if self.useObjectList else [object]
+        dataByIdentifier[self.identifier] = objects
+        collection = self.collection
         return list(getattr(collection, "objects", []))
 
     def invokeSeparateFunction(self):
-        if object_in is not None:
-            separateObjectByLooseParts(object_in, self.getSubCollectionName())
-            self.refresh()
+        wm = bpy.context.window_manager
+        wm.progress_begin(0, 100)
+        wm.progress_update(1)
 
-    def getSubCollectionName(self):
-        return "Loose_Objects" + self.identifier
+        if self.forceUpdateTree:
+            tree = bpy.data.node_groups.get(self.id_data.name)
+            tree.execute()
+
+        objects = dataByIdentifier.get(self.identifier)
+        collection = self.collection
+        if None in objects or collection is None:
+            return
+
+        removeObjectsFromCollection(collection)
+
+        try:
+            totalObjects = len(objects)
+            for i, object in enumerate(objects):
+                separateObjectByLooseParts(object, collection, self.setObjectOrgin, self.setObjectIDKey)
+                wm.progress_update(int((i/totalObjects)*100))
+        except Exception as e:
+            print("Object separation failed:")
+            print(str(e))
+
+        self.refresh()
+        wm.progress_end()
+        return
+
+    def createCollection(self):
+        collection = bpy.data.collections.new('AN_Separated_Objects')
+        bpy.context.scene.collection.children.link(collection)
+        self.collection = collection
+
+    def duplicate(self):
+        self.collection = None
 
     def delete(self):
-        subCollection = getCollection(self.getSubCollectionName())
-        if subCollection:
-            for object in subCollection.objects:
-                bpy.data.objects.remove(object)
-            bpy.data.collections.remove(subCollection)
+        keys = list(dataByIdentifier.keys())
+        for key in keys:
+            if key.startswith(self.identifier):
+                dataByIdentifier.pop(key)
 
-@executeInAreaType("VIEW_3D")
-def separateObjectByLooseParts(object, name):
-    enterObjectMode()
+def separateObjectByLooseParts(object, collection, setObjectOrgin, setObjectIDKey):
+    if object.type != "MESH":
+        return
+    if object.mode != "OBJECT":
+        return
 
     data = object.data.copy()
+    matrixWorld = object.matrix_world
+    data.transform(matrixWorld)
     objName = object.name + "_part.000"
+
     ob = bpy.data.objects.get(objName)
     if ob:
         bpy.data.objects.remove(ob)
 
     ob = bpy.data.objects.new(objName, data)
-    subCollection = getCollection(name)
+    collection.objects.link(ob)
 
-    for o in subCollection.objects:
-        bpy.data.objects.remove(o)
-
-    subCollection.objects.link(ob)
     bpy.ops.object.select_all(action = "DESELECT")
     bpy.context.view_layer.objects.active = ob
     ob.select_set(True)
     bpy.ops.mesh.separate(type = 'LOOSE')
-    setOrigin(subCollection.objects)
-    setIDKeys(subCollection.objects)
+    objects = bpy.context.selected_objects
+    if setObjectOrgin:
+        setOrigin(objects)
+    if setObjectIDKey:
+        setIDKeys(objects)
     bpy.ops.object.select_all(action = "DESELECT")
-
-def getCollection(name):
-    mainCollection = getMainObjectContainer(bpy.context.scene)
-    subCollection = bpy.data.collections.get(name)
-    if subCollection is None:
-        subCollection = bpy.data.collections.new(name)
-        mainCollection.children.link(subCollection)
-    return subCollection
-
-def setOrigin(objects):
-    for object in objects:
-        mesh = object.data
-        matrixWorld = object.matrix_world
-        origin = sum((v.co for v in mesh.vertices), Vector()) / len(mesh.vertices)
-        T = Matrix.Translation(-origin)
-        mesh.transform(T)
-        matrixWorld.translation = matrixWorld @ origin
-
-def setIDKeys(objects):
-    for object in objects:
-        object.id_keys.set("Transforms", "Initial Transforms",
-                (object.location, object.rotation_euler, object.scale))

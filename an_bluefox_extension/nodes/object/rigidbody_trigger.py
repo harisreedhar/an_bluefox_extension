@@ -1,6 +1,5 @@
 import bpy
 from bpy.props import *
-from animation_nodes . utils.depsgraph import getEvaluatedID
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 
 class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
@@ -10,11 +9,12 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
     errorHandlingType = "EXCEPTION"
     codeEffects = [VectorizedSocket.CodeEffect]
 
-    for attr in ["Object", "Active", "Enabled", "Threshold","Mass","Bounciness","Friction","LinearDamping",
-                 "AngularDamping","CollisionMargin","Collections"]:
-        exec("use{}List: VectorizedSocket.newProperty()".format(attr), globals(), locals())
+    nodeDict = {}
+    nodeIndex = 0
 
-    enableDepsgraph: BoolProperty(name = "Depsgraph evaluation", default = False, update = AnimationNode.refresh)
+    for attr in ["Object", "Active", "Enabled", "Threshold","Mass","Bounciness","Friction","LinearDamping",
+                 "AngularDamping","EnableCollisionMargin","CollisionMargin","Collections"]:
+        exec("use{}List: VectorizedSocket.newProperty()".format(attr), globals(), locals())
 
     def create(self):
         self.newInput(VectorizedSocket("Object", "useObjectList",
@@ -51,6 +51,9 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         self.newInput(VectorizedSocket("Float", toProp("useAngularDampingList"),
             ("Angular Damping", "angular_damping", dict(value = 0.1)),
             ("Angular Dampings", "angular_damping")))
+        self.newInput(VectorizedSocket("Boolean", toProp("useEnableCollisionMarginList"),
+            ("Enable Collision Margin", "enable_collision_margin", dict(value = False)),
+            ("Enable Collision Margins", "enable_collision_margin")))
         self.newInput(VectorizedSocket("Float", toProp("useCollisionMarginList"),
             ("Collision Margin", "collision_margin", dict(value = 0.04)),
             ("Collision Margins", "collision_margin")))
@@ -65,13 +68,43 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         for socket in self.inputs[3:]:
             socket.useIsUsedProperty = True
             socket.isUsed = False
-        for socket in self.inputs[3:]:
             socket.hide = True
 
     def drawAdvanced(self, layout):
-        layout.prop(self, "enableDepsgraph")
+        col = layout.column()
+        self.invokeFunction(col, "invokeAddRigidBody",
+                            text="Add",
+                            description="Link objects to rigidbody world",
+                            icon = "ADD")
+
+        self.invokeFunction(col, "invokeRemoveRigidBody",
+                            text="Remove",
+                            description="Unlink objects from rigidbody world",
+                            icon = "REMOVE")
+
+    def invokeAddRigidBody(self):
+        objects = self.getStoredObjects()
+        addRigidBody(objects, True)
+
+    def invokeRemoveRigidBody(self):
+        objects = self.getStoredObjects()
+        addRigidBody(objects, False)
+
+    def getStoredObjects(self):
+        keys = list(self.nodeDict.keys())
+        objects = []
+        for key in keys:
+            if key.startswith(self.identifier):
+                objects.append(self.nodeDict.get(key))
+        return objects
+
+    def storeObjectToDict(self, data):
+        identifier = str(self.identifier) + str(self.nodeIndex)
+        self.nodeDict[identifier] = data
 
     def getExecutionCode(self, required):
+        yield "self.nodeIndex += 1"
+        yield "self.storeObjectToDict(object)"
         yield "rigid_body = self.getRigidBodyObject(object)"
         yield "if rigid_body is not None:"
         yield "    influence = self.evaluateFalloff(falloff, object)"
@@ -90,8 +123,9 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
         if s[5].isUsed: yield "    rigid_body.friction = friction"
         if s[6].isUsed: yield "    rigid_body.linear_damping = linear_damping"
         if s[7].isUsed: yield "    rigid_body.angular_damping = angular_damping"
-        if s[8].isUsed: yield "    rigid_body.collision_margin = collision_margin"
-        if s[9].isUsed:
+        if s[8].isUsed: yield "    rigid_body.use_margin = enable_collision_margin"
+        if s[9].isUsed: yield "    rigid_body.collision_margin = collision_margin"
+        if s[10].isUsed:
             yield "    collectionValues = [False] * 20"
             yield "    try:"
             yield "        for index in [int(i) for i in collections.split(',')]:"
@@ -112,18 +146,49 @@ class BF_RigidBodyTriggerNode(bpy.types.Node, AnimationNode):
                 return None
             return rigid_body
 
-    objectIndex = 0
     def evaluateFalloff(self, falloff, object):
         location = (0,0,0)
-        if self.enableDepsgraph:
-            location = getEvaluatedID(object).location
-        else:
-            location = object.location
+        location = object.location
         falloffEvaluator = self.getFalloffEvaluator(falloff)
-        influence = falloffEvaluator(location, self.objectIndex)
-        self.objectIndex += 1
+        influence = falloffEvaluator(location, self.nodeIndex)
         return influence
 
     def getFalloffEvaluator(self, falloff):
         try: return falloff.getEvaluator("LOCATION")
         except: self.raiseErrorMessage("This falloff cannot be evaluated for vectors")
+
+    def delete(self):
+        keys = list(self.nodeDict.keys())
+        for key in keys:
+            if key.startswith(self.identifier):
+                self.nodeDict.pop(key)
+
+def addRigidBody(objects, activate):
+    try:
+        scene = bpy.context.scene
+        rigidBodyWorld = scene.rigidbody_world
+        if rigidBodyWorld is None:
+            bpy.ops.rigidbody.world_add()
+            rigidBodyWorld = scene.rigidbody_world
+        rigidBodyWorld.enabled = True
+
+        if rigidBodyWorld.collection is None:
+            newCollection = bpy.data.collections.new("RigidBodyWorld")
+            newCollection.use_fake_user = True
+            rigidBodyWorld.collection = newCollection
+
+        rigidBodyWorldObjects = rigidBodyWorld.collection.objects
+
+        for ob in objects:
+            if ob is None:
+                continue
+            if ob.type == 'MESH':
+                ob.data.update()
+                if activate:
+                    if ob.name not in rigidBodyWorldObjects:
+                        rigidBodyWorldObjects.link(ob)
+                else:
+                    if ob.name in rigidBodyWorldObjects:
+                        rigidBodyWorldObjects.unlink(ob)
+    except:
+       print('False')

@@ -1,6 +1,5 @@
 import bpy
 from bpy.props import *
-from animation_nodes . events import propertyChanged
 from animation_nodes . data_structures import PolySpline
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 
@@ -11,11 +10,11 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
     errorHandlingType = "EXCEPTION"
 
     codeEffects = [VectorizedSocket.CodeEffect]
-    for attr in ["Vector","StartFrame","EndFrame","Radius","Tilt","MinDistance","Smoothness"]:
+    for attr in ["Vector","StartFrame","EndFrame","Radius","Tilt","MinDistance"]:
         exec("use{}List: VectorizedSocket.newProperty()".format(attr), globals(), locals())
 
-    executionIndex = 0
-    executionCache = {}
+    nodeIndex = 0
+    nodeCache = {}
 
     def create(self):
         self.newInput(VectorizedSocket("Vector", "useVectorList",
@@ -41,7 +40,7 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
             ("Min Distance", "minDistance", dict(value = 0.1)),
             ("Min Distances", "minDistance")))
 
-        self.newInput("Boolean", "Full Reset", "reset", value = False, hide = True)
+        self.newInput("Boolean", "Reset", "reset", value = False, hide = True)
         self.newInput("Scene", "Scene", "scene", hide = True)
 
         listCollection = ["useVectorList", "useStartFrameList", "useEndFrameList",
@@ -51,41 +50,41 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
             ("Spline", "spline"), ("Splines", "spline")))
 
     def execute(self, point, startFrame, endFrame, radius, tilt, minDistance, reset, scene):
-        self.executionIndex += 1
+        self.nodeIndex += 1
+
+        spline = PolySpline()
         if scene is None:
-            return PolySpline()
+            return spline
 
-        sceneStart = scene.frame_start
         currentFrame = scene.frame_current
-        identifier = self.identifier + str(self.executionIndex)
+        if currentFrame < startFrame:
+            return spline
 
-        if (currentFrame == sceneStart) or reset:
-            self.resetExecutionCache()
+        identifier = self.identifier + str(self.nodeIndex)
+        spline = self.nodeCache.get(identifier)
 
-        spline = self.executionCache.get(identifier)
-        if spline is None or (currentFrame == startFrame):
-            self.executionCache[identifier] = PolySpline()
-            return PolySpline()
+        if (currentFrame == startFrame) or reset or spline is None:
+            spline = PolySpline()
+            self.nodeCache[identifier] = spline
+            return spline
 
         if currentFrame > startFrame and currentFrame <= endFrame:
-            if self.validateMinDistance(point, spline, minDistance):
+            if self.checkAppendDistance(point, spline, minDistance):
                 spline.appendPoint(point, radius, tilt)
 
         return spline.copy()
 
-    def validateMinDistance(self, point, spline, minDistance):
+    def checkAppendDistance(self, point, spline, minDistance):
         if len(spline.points):
             pointDistance = (spline.points[-1] - point).length
             return pointDistance >= minDistance
         return True
 
-    def resetExecutionCache(self):
-        for key in self.executionCache.keys():
-            if key.startswith(self.identifier):
-                self.executionCache[key] = None
-
-    def delete(self):
-        keys = list(self.executionCache.keys())
+    def clearCache(self):
+        keys = list(self.nodeCache.keys())
         for key in keys:
             if key.startswith(self.identifier):
-                self.executionCache.pop(key)
+                self.nodeCache.pop(key, None)
+
+    def delete(self):
+        self.clearCache()

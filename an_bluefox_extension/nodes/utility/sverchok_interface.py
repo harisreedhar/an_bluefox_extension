@@ -27,7 +27,7 @@ class BF_SverchokInterfaceNode(bpy.types.Node, AnimationNode):
 
     dataDirection: EnumProperty(name = "Data Direction", default = "IMPORT",
         items = dataDirectionItems, update = checkedPropertiesChanged)
-
+    textBlock: PointerProperty(type = bpy.types.Text)
     amount: IntProperty(name = "Amount", default = 1, min = 1, update = checkedPropertiesChanged)
 
     def create(self):
@@ -42,12 +42,11 @@ class BF_SverchokInterfaceNode(bpy.types.Node, AnimationNode):
     def draw(self, layout):
         layout.prop(self, "dataDirection", text = "")
         layout.prop(self, "amount", text = "Amount")
-        row2 = layout.row(align = True)
-        if self.getTextObject() is None:
-            self.invokeFunction(row2, "generateTextFile", text = "Generate Script",
-                    description = "Generate script for sverchok", icon = "TEXT")
-        else:
-            row2.label(text = self.getTextName(), icon = "TEXT")
+        col = layout.column(align = True)
+        row = col.row(align = True)
+        if self.textBlock is None:
+            self.invokeFunction(row, "createNewTextBlock", icon = "ADD")
+        row.prop(self, "textBlock", text = "")
 
     def drawLabel(self):
         for item in dataDirectionItems:
@@ -102,18 +101,23 @@ class BF_SverchokInterfaceNode(bpy.types.Node, AnimationNode):
             self.raiseErrorMessage("No Script Found")
             return False
 
-    def generateTextFile(self):
-        bpy.data.texts.new(self.getTextName())
-        return self.generateScript()
+    def viewTextBlockInArea(self, area):
+        area.type = "TEXT_EDITOR"
+        space = area.spaces.active
+        space.text = self.textBlock
+        space.show_line_numbers = True
+        space.show_syntax_highlight = True
+
+    def createNewTextBlock(self):
+        textBlock = bpy.data.texts.new(name = self.getTextName())
+        self.textBlock = textBlock
+        self.generateScript()
 
     def getTextObject(self):
-        return bpy.data.texts.get(self.getTextName())
+        return self.textBlock
 
     def getTextName(self):
-        if self.dataDirection == "IMPORT":
-            return "Import_Script_" + self.name + ".py"
-        elif self.dataDirection == "EXPORT":
-            return "Export_Script_" + self.name + ".py"
+        return "AN-SV-script"
 
     def execute(self, *args):
         if self.dataDirection == "IMPORT":
@@ -130,7 +134,7 @@ class BF_SverchokInterfaceNode(bpy.types.Node, AnimationNode):
             if type(value[index][0]) is list:
                 flat_list = [item for i in value[index] for item in i]
                 return flat_list
-            return value[index]
+            return (value[index])
         except:
             return None
 
@@ -138,6 +142,9 @@ class BF_SverchokInterfaceNode(bpy.types.Node, AnimationNode):
         textObject = self.getTextObject()
         if textObject is not None:
             bpy.data.texts.remove(textObject)
+
+    def duplicate(self, sourceNode):
+        self.textBlock = None
 
     def setValue(self, value):
         dataByIdentifier[self.identifier] = value
