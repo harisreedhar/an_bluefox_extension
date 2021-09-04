@@ -1,3 +1,4 @@
+import os
 import bpy
 from bpy.props import *
 from ... utils import save_to_disk as sd
@@ -90,6 +91,9 @@ class BF_DiskCacheNode(bpy.types.Node, AnimationNode):
 
         self.nodeCache[self.getCacheKey()] = data
         self.listLength = len(data)
+
+        if not os.path.isfile(self.filePath):
+            self.raiseErrorMessage("File doesn't exist")
 
         try:
             if self.reader is None:
