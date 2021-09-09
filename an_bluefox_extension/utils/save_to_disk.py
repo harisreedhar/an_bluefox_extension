@@ -95,21 +95,25 @@ def arrayToData(array, classType):
 # Write to Disk
 
 class Writer:
-    def __init__(self, fileName, n, maxLength, classType="VECTORS"):
+    def __init__(self, fileName, info={}):
+        n = info.get('n')
         assert n > 0
 
         name = fileName[0:-4] if fileName.endswith('.npy') else fileName
         lookupFile = name + '_lookup.npy'
         metaFile = name + '_meta.json'
 
+        classType = info.get('class_type')
         dtype = getDtype(classType)
-        maxShape = getMaxShape(classType, maxLength)
+        maxShape = getMaxShape(classType, info.get('max_length'))
         shape = (n, *maxShape)
         meta = {
             "max_shape": maxShape,
             "n": n,
             "dtype": dtype,
-            "class_type": classType
+            "class_type": classType,
+            "start_frame": info.get('start_frame'),
+            "end_frame": info.get('end_frame')
         }
         with open(metaFile, 'w+') as f:
             metaDmp = json.dumps(meta)
@@ -194,18 +198,17 @@ class Reader:
         n = meta['n']
         maxShape = meta['max_shape']
         dtype = meta['dtype']
-        fileClassType = meta['class_type']
 
         shape = (n, *maxShape)
         X = np.memmap(fileName, shape=shape, dtype=dtype, mode='r')
         self.X = X
         self.lookup = lookup
-        self.classType = classType
-        self.fileClassType = fileClassType
+        self.classType = meta['class_type']
+        self.startFrame = meta['start_frame']
+        self.endFrame = meta['end_frame']
+        self.n = n
 
     def __getitem__(self, item):
-        if self.classType != self.fileClassType:
-            raise ValueError(f'Type mismatch! File contains type "{self.fileClassType.title()}"')
         if isinstance(item, int):
             if self.classType in type1List:
                 h, w = self.lookup[item]
