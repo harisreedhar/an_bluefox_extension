@@ -1,4 +1,5 @@
-# AN BlueFox extension
+# AN BlueFox extension [![Build And Deploy](https://github.com/harisreedhar/an_bluefox_extension/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/harisreedhar/an_bluefox_extension/actions/workflows/build.yml)
+
 Extension for animation nodes addon for blender.
 
 ## Features
