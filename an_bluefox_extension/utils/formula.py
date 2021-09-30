@@ -1,5 +1,6 @@
 import bpy
 import numpy as np
+from ast import parse
 
 def checkIter(object):
     try:
@@ -8,15 +9,19 @@ def checkIter(object):
     except:
         return False
 
-def evaluateFormula(formula, count = 0, falloff = 0,
-                          px = 0, py = 0, pz = 0,
-                          rx = 0, ry = 0, rz = 0,
-                          sx = 1, sy = 1, sz = 1,
-                          a = 0, b = 0, c = 0,
-                          d = 0, e = 0, f = 0,
-                          x = 0, y = 0, z = 0):
+def isValidVariableName(name):
+    try:
+        parse('{} = None'.format(name))
+        return True
+    except (SyntaxError, ValueError, TypeError):
+        return False
 
-    id = np.linspace(0, count-1, num = count, dtype = "int")
+def evaluateFormula(formula, count=None, vars=dict()):
+    for key,value in vars.items():
+        exec(key + '=value')
+
+    if count is not None:
+        id = np.linspace(0, count-1, num = count, dtype = "int")
     frame = bpy.context.scene.frame_current
 
     # constants

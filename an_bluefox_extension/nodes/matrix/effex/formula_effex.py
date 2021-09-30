@@ -2,10 +2,10 @@ import bpy
 import numpy as np
 from bpy.props import *
 from . effex_base import EffexBase
-from .... utils . formula import evaluateFormula
 from animation_nodes . base_types import AnimationNode
 from animation_nodes . nodes.rotation.c_utils import eulersToVectors
-from animation_nodes . data_structures import Matrix4x4List, Vector3DList, FloatList
+from .... utils . formula import evaluateFormula, isValidVariableName
+from animation_nodes . data_structures import FloatList, VirtualDoubleList, VirtualLongList
 
 class BF_FormulaEffexNode(bpy.types.Node, AnimationNode, EffexBase):
     bl_idname = "an_bf_FormulaEffexNode"
@@ -26,13 +26,15 @@ class BF_FormulaEffexNode(bpy.types.Node, AnimationNode, EffexBase):
 
     def create(self):
         self.newInput("Matrix List", "Matrices", "matrices", dataIsModified = True)
+        self.newInput("Struct", "Variables", "variables")
         self.createBasicInputs()
         self.newOutput("Matrix List", "Matrices", "matrices")
         self.newOutput("Float List", "Values", "effexValues", hide = True)
         self.updateSocketVisibility()
 
     def draw(self, layout):
-        layout.prop(self, "formula", text = "")
+        col = layout.column(align=True)
+        col.prop(self, "formula", text = "")
         self.draw_MatrixTransformationProperties(layout)
 
     def drawAdvanced(self, layout):
@@ -52,40 +54,62 @@ class BF_FormulaEffexNode(bpy.types.Node, AnimationNode, EffexBase):
             if any([self.useTranslation, self.useRotation, self.useScale]):
                 yield "efStrengths = AN.data_structures.FloatList()"
                 yield "try:"
-                yield "    efStrengths = self.getFormulaStrengths(self.formula, matrices, falloff)"
+                yield "    efStrengths = self.getFormulaStrengths(matrices, falloff, variables)"
                 yield "    mixedFalloff = self.mixEffexAndFalloff(efStrengths, falloff, interpolation, outMin=minValue, outMax=maxValue)"
                 yield "    influences = self.getInfluences(mixedFalloff, matrices)"
                 yield "    matrices = self.offsetMatrixList(matrices, influences, translation, rotation, scale)"
                 if "effexValues" in required:
                     yield "    effexValues = AN.data_structures.DoubleList.fromValues(influences)"
                 yield "except Exception as e:"
-                yield "    print('Formula Effex Error:', str(e))"
-                yield "    self.setErrorMessage('Formula error!')"
+                yield "    self.setErrorMessage(f'Formula error! {str(e)}')"
 
-    def getFormulaStrengths(self, formula, matrices, falloff):
+    def getFormulaStrengths(self, matrices, falloff, userInputs):
         formula = self.formula
-        pX = pY = pZ = rX = rY = rZ = arrF = 0
-        sX = sY = sZ = 1
+        variables = dict()
         if formula != "":
             t,r,s = self.getMatriceComponents(matrices)
             if self.incPosAttr:
                 arrT = t.asNumpyArray().reshape(-1,3)
-                pX,pY,pZ = arrT[:,0], arrT[:,1], arrT[:,2]
+                variables['px'] = arrT[:,0]
+                variables['py'] = arrT[:,1]
+                variables['pz'] = arrT[:,2]
             if self.incRotAttr:
                 r = eulersToVectors(r, False)
                 arrR = r.asNumpyArray().reshape(-1,3)
-                rX,rY,rZ = arrR[:,0], arrR[:,1], arrR[:,2]
+                variables['rx'] = arrR[:,0]
+                variables['ry'] = arrR[:,1]
+                variables['rz'] = arrR[:,2]
             if self.incScaleAttr:
                 arrS = s.asNumpyArray().reshape(-1,3)
-                sX,sY,sZ = arrS[:,0], arrS[:,1], arrS[:,2]
+                variables['sx'] = arrS[:,0]
+                variables['sy'] = arrS[:,1]
+                variables['sz'] = arrS[:,2]
             if self.incFalloffAttr:
                 influences = self.getInfluences(falloff, matrices).copy()
-                arrF = influences.asNumpyArray()
+                variables["falloff"] = influences.asNumpyArray()
 
-            array = evaluateFormula(formula, count = len(matrices), falloff = arrF,
-                    px = pX, py = pY, pz = pZ,
-                        rx = rX, ry = rY, rz = rZ,
-                            sx = sX, sy = sY, sz = sZ)
+            totalCount = len(matrices)
+
+            for key, value in zip(userInputs.keys(), userInputs.values()):
+                varType = key[0]
+                varName = key[1]
+                if not isValidVariableName(varName):
+                    self.raiseErrorMessage(f"Invalid variable name '{varName}' ")
+                    return
+                if varType == "Float List":
+                    if len(value):
+                        _value = VirtualDoubleList.create(value, 0).materialize(totalCount)
+                        variables[varName] = _value.asNumpyArray().astype('f')
+                elif varType == "Integer List":
+                    if len(value):
+                        _value = VirtualLongList.create(value, 0).materialize(totalCount)
+                        variables[varName] = _value.asNumpyArray().astype('f')
+                elif varType in ("Float", "Integer"):
+                    variables[varName] = value
+                else:
+                    self.raiseErrorMessage("Variable must be Float or Integer type")
+
+            array = evaluateFormula(formula, count = totalCount, vars = variables)
 
             strengths = FloatList.fromNumpyArray(array.astype('f'))
             return strengths

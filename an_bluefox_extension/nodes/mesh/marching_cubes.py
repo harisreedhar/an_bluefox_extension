@@ -115,7 +115,7 @@ class BF_MarchingCubesNode(bpy.types.Node, AnimationNode):
             falloffStrengths = falloffEvaluator.evaluateList(vectors)
             return falloffStrengths.asNumpyArray().astype('float32')
         elif self.fieldType == "FORMULA":
-            return evaluateFormula(field, x=gx, y=gy, z=gz)
+            return evaluateFormula(field, vars={'x':gx, 'y':gy, 'z':gz})
         elif self.fieldType == "FUNCTION":
             return field(gx, gy, gz)
         else:
