@@ -32,6 +32,7 @@ class BF_DiskCacheWriterNode(bpy.types.Node, AnimationNode):
     endFrame    : IntProperty(default = 100, update = AnimationNode.refresh)
     maxLength   : IntProperty(name = "Maximum list length", default = 100, update = AnimationNode.refresh)
     listLength  : IntProperty(default = 1, update = AnimationNode.refresh)
+    executeFlag : BoolProperty(default = False, update = AnimationNode.refresh)
 
     def create(self):
         socketType = self.classType.title() + " List"
@@ -62,35 +63,44 @@ class BF_DiskCacheWriterNode(bpy.types.Node, AnimationNode):
         wm = bpy.context.window_manager
         wm.progress_begin(0, 100)
         wm.progress_update(1)
+        self.executeFlag = True
 
-        filePath = self.filePath
-        length = self.maxLength if self.lengthType == "VARIABLE" else self.listLength
-        if self.listLength == 0:
-            return
-        n = self.endFrame - self.startFrame + 1
-        info = {
-            'n': n,
-            'max_length': length,
-            'start_frame': self.startFrame,
-            'end_frame': self.endFrame,
-            'class_type': self.classType
-        }
-        with sd.Writer(filePath, info) as f:
-            count = 0
-            for i in range(self.startFrame, self.endFrame + 1):
-                bpy.context.scene.frame_set(i)
-                data = self.nodeCache.get(self.identifier)
-                if data is None:return
-                f.add(data)
-                wm.progress_update(int((count/n) * 100))
-                count += 1
+        try:
+            filePath = self.filePath
+            length = self.maxLength if self.lengthType == "VARIABLE" else self.listLength
+            if self.listLength == 0:
+                return
+            n = self.endFrame - self.startFrame + 1
+            info = {
+                'n': n,
+                'max_length': length,
+                'start_frame': self.startFrame,
+                'end_frame': self.endFrame,
+                'class_type': self.classType
+            }
+            with sd.Writer(filePath, info) as f:
+                count = 0
+                for i in range(self.startFrame, self.endFrame + 1):
+                    bpy.context.scene.frame_set(i)
+                    data = self.nodeCache.get(self.identifier)
+                    if data is None:return
+                    f.add(data)
+                    wm.progress_update(int((count/n) * 100))
+                    count += 1
+        except Exception as e:
+            print("Disk writing Failed")
+            print(str(e))
+
+        self.executeFlag = False
+        self.delete()
         wm.progress_end()
 
     def execute(self, data):
-        if self.startFrame >= self.endFrame:
-            self.endFrame = self.startFrame + 1
-        self.nodeCache[self.identifier] = data
-        self.listLength = len(data)
+        if self.executeFlag:
+            if self.startFrame >= self.endFrame:
+                self.endFrame = self.startFrame + 1
+            self.nodeCache[self.identifier] = data
+            self.listLength = len(data)
 
     def deleteDiskCache(self):
         sd.delete(self.filePath)
