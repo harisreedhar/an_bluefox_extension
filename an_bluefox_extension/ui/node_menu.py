@@ -106,6 +106,7 @@ class BF_UtilityMenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        insertNode(layout, "an_bf_AlembicExporterNode", "Alembic Exporter")
         insertNode(layout, "an_bf_AutoFitVectorsNode", "Auto Fit Vectors")
         insertNode(layout, "an_bf_AutoFitFloatsNode", "Auto Fit Floats")
         insertNode(layout, "an_bf_CSV_WriterNode", "CSV Writer")
