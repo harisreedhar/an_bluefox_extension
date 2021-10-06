@@ -13,17 +13,26 @@ class BF_AlembicExporterNode(bpy.types.Node, AnimationNode):
     useObjectList  : VectorizedSocket.newProperty()
 
     filePath           : StringProperty(name = "File Path", subtype ='FILE_PATH', default = "/tmp/my_cache", update = AnimationNode.refresh)
-    executeFlag        : BoolProperty(default = False, update = AnimationNode.refresh)
-    showSettings       : BoolProperty(name = "Settings", default = False, update = AnimationNode.refresh)
-    startFrame         : IntProperty(name = "Start Frame", default = 1, update = AnimationNode.refresh)
-    endFrame           : IntProperty(name = "End Frame", default = 250, update = AnimationNode.refresh)
-    sequence           : BoolProperty(name = "As Sequence", default = False, update= AnimationNode.refresh)
+    startFrame         : IntProperty(name = "Start Frame", min = 0, default = 1, update = AnimationNode.refresh)
+    endFrame           : IntProperty(name = "End Frame", min = 0, default = 250, update = AnimationNode.refresh)
+    transformSamples   : IntProperty(name = "Transform Samples", default = 1, min = 1, max = 128, update = AnimationNode.refresh)
+    geometrySamples    : IntProperty(name = "Geometry Samples", default = 1, min = 1, max = 128, update = AnimationNode.refresh)
+    flatten            : BoolProperty(name = "Flatten Hierarchy", default = False, update = AnimationNode.refresh)
     exportUVs          : BoolProperty(name = "UVs", default = True, update = AnimationNode.refresh)
+    packUVs            : BoolProperty(name = "Pack UV islands", default = True, update = AnimationNode.refresh)
     exportNormals      : BoolProperty(name = "Normals", default = True, update = AnimationNode.refresh)
     exportVertexColors : BoolProperty(name = "Vertex Colors", default = True, update = AnimationNode.refresh)
+    exportFaceSets     : BoolProperty(name = "Face Sets", default = False, update = AnimationNode.refresh)
     applySubdivisions  : BoolProperty(name = "Apply Subdivisions", default = False, update = AnimationNode.refresh)
     curveAsMesh        : BoolProperty(name = "Curves as Mesh", default = False, update = AnimationNode.refresh)
-    packUVs            : BoolProperty(name = "Pack UV islands", default = True, update = AnimationNode.refresh)
+    useInstancing      : BoolProperty(name = "Use Instancing", default = False, update = AnimationNode.refresh)
+    globalScale        : FloatProperty(name = "Global Scale", default = 1, min = 0.0001, max = 1000, update = AnimationNode.refresh)
+    triangulate        : BoolProperty(name = "Triangulate", default = False, update = AnimationNode.refresh)
+    useViewportSettings: BoolProperty(name = "Use Viewport settings", default = False, update = AnimationNode.refresh)
+
+    executeFlag        : BoolProperty(default = False, update = AnimationNode.refresh)
+    showSettings       : BoolProperty(name = "Export Settings", default = False, update = AnimationNode.refresh)
+    sequence           : BoolProperty(name = "Export as sequence", default = True, update= AnimationNode.refresh)
 
     def create(self):
         self.newInput(VectorizedSocket("Object", "useObjectList",
@@ -35,20 +44,37 @@ class BF_AlembicExporterNode(bpy.types.Node, AnimationNode):
         col.scale_y = 1.5
         row = col.row(align = True)
         self.invokeFunction(row, "invokeExportAlembic", description = "Export", text= "Export")
+        row.prop(self, "showSettings", text = "", icon = "PREFERENCES")
 
         col = layout.column(align = True)
         row = col.row(align = True)
         row.prop(self, "filePath", text="")
-        row.prop(self, "showSettings", text = "", icon = "PREFERENCES")
         col.prop(self, "startFrame")
         col.prop(self, "endFrame")
         col.prop(self, "sequence")
 
         if self.showSettings:
             col = layout.column(align = True)
-            for item in ["exportUVs", "exportNormals", "exportVertexColors",
-                    "applySubdivisions", "curveAsMesh", "packUVs"]:
+            row = col.row(align = True)
+            row.label(text = "Export Settings:")
+            box = col.box()
+            col = box.column()
+            col = col.column(align = True)
+            for item in ["exportUVs", "packUVs", "exportNormals",
+                "exportVertexColors", "exportFaceSets", "curveAsMesh",
+                "applySubdivisions", "triangulate"]:
                 col.prop(self, item)
+
+    def drawAdvanced(self, layout):
+        col = layout.column(align = True)
+        row = col.row(align = True)
+        row.label(text = "Scene Options:")
+        box = col.box()
+        col = box.column()
+        col = col.column(align = True)
+        for item in ["globalScale", "transformSamples", "geometrySamples",
+            "useInstancing", "flatten", "useViewportSettings"]:
+            col.prop(self, item)
 
     def execute(self, object):
         if self.executeFlag:
@@ -63,16 +89,24 @@ class BF_AlembicExporterNode(bpy.types.Node, AnimationNode):
             parameters = {
                 'start': self.startFrame,
                 'end': self.endFrame,
+                'xsamples': self.transformSamples,
+                'gsamples': self.geometrySamples,
+                'flatten': self.flatten,
                 'uvs': self.exportUVs,
                 'packuv': self.packUVs,
                 'normals': self.exportNormals,
                 'vcolors': self.exportVertexColors,
+                'face_sets': self.exportFaceSets,
                 'apply_subdiv': self.applySubdivisions,
                 'curves_as_mesh': self.curveAsMesh,
+                'use_instancing': self.useInstancing,
+                'global_scale': self.globalScale,
+                'triangulate': self.triangulate,
                 'check_existing': False,
                 'selected': True,
                 'as_background_job': False,
-                'visible_objects_only': False
+                'visible_objects_only': False,
+                'evaluation_mode': 'VIEWPORT' if self.useViewportSettings else 'RENDER',
             }
             exportAlembic(self.filePath, object, parameters, sequence = self.sequence)
 
@@ -119,5 +153,5 @@ def selectObjects(objects):
         bpy.context.view_layer.objects.active = None
     else:
         bpy.context.view_layer.objects.active = objects[0]
-    for object in objects:
-        object.select_set(True)
+        for object in objects:
+            object.select_set(True)
