@@ -1,6 +1,8 @@
 import bpy
 from bpy.props import *
+from dataclasses import dataclass
 from ... utils import save_to_disk as sd
+from animation_nodes . events import propertyChanged
 from animation_nodes . base_types import AnimationNode
 
 classTypeItems = {
@@ -13,10 +15,16 @@ classTypeItems = {
     ("MATRIX", "Matrix", "4x4 Matrix list", "", 6)
 }
 
-lengthTypeItems = {
-    ("CONSTANT", "Constant", "Constant input list length", "", 0),
-    ("VARIABLE", "Variable", "Variable input list length", "", 1)
-}
+@dataclass
+class DataContainer:
+    data: list
+    filePath: str
+    classType: str
+    startFrame: int
+    endFrame: int
+    maxLength: int
+
+cache = {}
 
 class BF_DiskCacheWriterNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_bf_DiskCacheWriterNode"
@@ -24,89 +32,101 @@ class BF_DiskCacheWriterNode(bpy.types.Node, AnimationNode):
     bl_width_default = 180
     errorHandlingType = "EXCEPTION"
 
-    nodeCache = {}
-    filePath    : StringProperty(name = "File Path", subtype='FILE_PATH', default = "/tmp/an_cache.npy", update = AnimationNode.refresh)
-    classType   : EnumProperty(name = "Input List Type", default = "VECTOR", items = classTypeItems, update = AnimationNode.refresh)
-    lengthType  : EnumProperty(default = "CONSTANT", items = lengthTypeItems, update = AnimationNode.refresh)
-    startFrame  : IntProperty(default = 1, update = AnimationNode.refresh)
-    endFrame    : IntProperty(default = 100, update = AnimationNode.refresh)
-    maxLength   : IntProperty(name = "Maximum list length", default = 100, update = AnimationNode.refresh)
-    listLength  : IntProperty(default = 1, update = AnimationNode.refresh)
-    executeFlag : BoolProperty(default = False, update = AnimationNode.refresh)
+    classType: EnumProperty(name="Input List Type", default="VECTOR", items=classTypeItems, update=propertyChanged)
 
     def create(self):
+        self.newInput("Text", "File Path", "filePath",
+            value="/tmp/an_cache.npy",
+            showFileChooser = True,
+            defaultDrawType = "PROPERTY_ONLY")
         socketType = self.classType.title() + " List"
-        self.newInput(socketType, "Data", "in")
+        self.newInput(socketType, "Data", "data")
+        self.newInput("Integer", "Start Frame", "startFrame", value = 1)
+        self.newInput("Integer", "End Frame", "endFrame", value = 250)
+        self.newInput("Integer", "Max List Length", "maxListLength", minValue=1, value = 1000)
+        self.newOutput("Text", "File Path", "filePath")
 
     def draw(self, layout):
         col = layout.column(align=True)
-        row = col.row(align=True)
-        row.prop(self, "filePath", text="")
         subcol = col.column(align=True)
         subcol.scale_y = 1.5
         subrow = subcol.row(align=True)
         self.invokeFunction(subrow, "writeToDisk", description="Write to disk", text="Write", icon="DISK_DRIVE")
         self.invokeFunction(subrow, "deleteDiskCache", description="Delete from disk", text="Delete", icon="TRASH")
-
         col = layout.column(align=True)
         subcol = col.column(align=True)
         row = subcol.row(align=True)
-        subcol.prop(self, "classType", text='')
-        row = subcol.row(align=True)
-        row.prop(self, "lengthType", expand=True)
-        subcol.prop(self, "startFrame", text='Start Frame')
-        subcol.prop(self, "endFrame", text='End Frame')
-        if self.lengthType == "VARIABLE":
-            subcol.prop(self, "maxLength", text='Max Input Length')
+        row.prop(self, "classType", text='')
 
     def writeToDisk(self):
         wm = bpy.context.window_manager
         wm.progress_begin(0, 100)
         wm.progress_update(1)
-        self.executeFlag = True
 
         try:
-            filePath = self.filePath
-            length = self.maxLength if self.lengthType == "VARIABLE" else self.listLength
-            if self.listLength == 0:
-                return
-            n = self.endFrame - self.startFrame + 1
+            packedData = cache.get(self.identifier, None)
+            if packedData is None: return
+
+            filePath = packedData.filePath
+            classType = packedData.classType
+            startFrame = packedData.startFrame
+            endFrame = packedData.endFrame
+            maxLength = packedData.maxLength
+
+            if maxLength < 1 : return
+            n = endFrame - startFrame + 1
+
             info = {
                 'n': n,
-                'max_length': length,
-                'start_frame': self.startFrame,
-                'end_frame': self.endFrame,
-                'class_type': self.classType
+                'max_length': maxLength,
+                'start_frame': startFrame,
+                'end_frame': endFrame,
+                'class_type': classType
             }
+            restoreFrame = bpy.context.scene.frame_current
             with sd.Writer(filePath, info) as f:
                 count = 0
-                for i in range(self.startFrame, self.endFrame + 1):
+                for i in range(startFrame, endFrame + 1):
                     bpy.context.scene.frame_set(i)
-                    data = self.nodeCache.get(self.identifier)
+                    data = cache.get(self.identifier, None).data
                     if data is None:return
                     f.add(data)
                     wm.progress_update(int((count/n) * 100))
                     count += 1
+            bpy.context.scene.frame_set(restoreFrame)
+
         except Exception as e:
             print("Disk writing Failed")
             print(str(e))
 
-        self.executeFlag = False
         self.delete()
         wm.progress_end()
 
-    def execute(self, data):
-        if self.executeFlag:
-            if self.startFrame >= self.endFrame:
-                self.endFrame = self.startFrame + 1
-            self.nodeCache[self.identifier] = data
-            self.listLength = len(data)
+    def execute(self, filePath, data, startFrame, endFrame, maxListLength):
+        if startFrame >= endFrame:
+            self.raiseErrorMessage("End Frame should be greater than Start Frame")
+
+        listLength = len(data)
+        if listLength > maxListLength:
+            data = data[:maxListLength]
+
+        cache[self.identifier] = DataContainer(
+            data,
+            filePath,
+            self.classType,
+            startFrame,
+            endFrame,
+            maxListLength)
+
+        return filePath
 
     def deleteDiskCache(self):
-        sd.delete(self.filePath)
+        data = cache.get(self.identifier, None)
+        if data:
+            sd.delete(data.filePath)
 
     def delete(self):
-        keys = list(self.nodeCache.keys())
+        keys = list(cache.keys())
         for key in keys:
             if key.startswith(self.identifier):
-                self.nodeCache.pop(key, None)
+                cache.pop(key, None)
