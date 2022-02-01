@@ -28,7 +28,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install numpy==1.19.5
+          pip install numpy==1.21
           pip install Cython --install-option="--no-cython-compile"
       - name: Download Animation Nodes' Headers
         uses: i3h/download-release-asset@v1
