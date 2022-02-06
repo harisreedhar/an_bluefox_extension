@@ -1,5 +1,6 @@
 import bpy
 from bpy.props import *
+from animation_nodes . events import propertyChanged
 from animation_nodes . base_types import AnimationNode, VectorizedSocket
 
 dataByIdentifier = {}
@@ -12,27 +13,27 @@ class BF_AlembicExporterNode(bpy.types.Node, AnimationNode):
 
     useObjectList  : VectorizedSocket.newProperty()
 
-    filePath           : StringProperty(name = "File Path", subtype ='FILE_PATH', default = "/tmp/my_cache", update = AnimationNode.refresh)
-    startFrame         : IntProperty(name = "Start Frame", min = 0, default = 1, update = AnimationNode.refresh)
-    endFrame           : IntProperty(name = "End Frame", min = 0, default = 250, update = AnimationNode.refresh)
-    transformSamples   : IntProperty(name = "Transform Samples", default = 1, min = 1, max = 128, update = AnimationNode.refresh)
-    geometrySamples    : IntProperty(name = "Geometry Samples", default = 1, min = 1, max = 128, update = AnimationNode.refresh)
-    flatten            : BoolProperty(name = "Flatten Hierarchy", default = False, update = AnimationNode.refresh)
-    exportUVs          : BoolProperty(name = "UVs", default = True, update = AnimationNode.refresh)
-    packUVs            : BoolProperty(name = "Pack UV islands", default = True, update = AnimationNode.refresh)
-    exportNormals      : BoolProperty(name = "Normals", default = True, update = AnimationNode.refresh)
-    exportVertexColors : BoolProperty(name = "Vertex Colors", default = True, update = AnimationNode.refresh)
-    exportFaceSets     : BoolProperty(name = "Face Sets", default = False, update = AnimationNode.refresh)
-    applySubdivisions  : BoolProperty(name = "Apply Subdivisions", default = False, update = AnimationNode.refresh)
-    curveAsMesh        : BoolProperty(name = "Curves as Mesh", default = False, update = AnimationNode.refresh)
-    useInstancing      : BoolProperty(name = "Use Instancing", default = False, update = AnimationNode.refresh)
-    globalScale        : FloatProperty(name = "Global Scale", default = 1, min = 0.0001, max = 1000, update = AnimationNode.refresh)
-    triangulate        : BoolProperty(name = "Triangulate", default = False, update = AnimationNode.refresh)
-    useViewportSettings: BoolProperty(name = "Use Viewport settings", default = False, update = AnimationNode.refresh)
+    filePath           : StringProperty(name = "File Path", subtype ='FILE_PATH', default = "/tmp/my_cache", update = propertyChanged)
+    startFrame         : IntProperty(name = "Start Frame", min = 0, default = 1, update = propertyChanged)
+    endFrame           : IntProperty(name = "End Frame", min = 0, default = 250, update = propertyChanged)
+    transformSamples   : IntProperty(name = "Transform Samples", default = 1, min = 1, max = 128, update = propertyChanged)
+    geometrySamples    : IntProperty(name = "Geometry Samples", default = 1, min = 1, max = 128, update = propertyChanged)
+    flatten            : BoolProperty(name = "Flatten Hierarchy", default = False, update = propertyChanged)
+    exportUVs          : BoolProperty(name = "UVs", default = True, update = propertyChanged)
+    packUVs            : BoolProperty(name = "Pack UV islands", default = True, update = propertyChanged)
+    exportNormals      : BoolProperty(name = "Normals", default = True, update = propertyChanged)
+    exportVertexColors : BoolProperty(name = "Vertex Colors", default = True, update = propertyChanged)
+    exportFaceSets     : BoolProperty(name = "Face Sets", default = False, update = propertyChanged)
+    applySubdivisions  : BoolProperty(name = "Apply Subdivisions", default = False, update = propertyChanged)
+    curveAsMesh        : BoolProperty(name = "Curves as Mesh", default = False, update = propertyChanged)
+    useInstancing      : BoolProperty(name = "Use Instancing", default = False, update = propertyChanged)
+    globalScale        : FloatProperty(name = "Global Scale", default = 1, min = 0.0001, max = 1000, update = propertyChanged)
+    triangulate        : BoolProperty(name = "Triangulate", default = False, update = propertyChanged)
+    useViewportSettings: BoolProperty(name = "Use Viewport settings", default = False, update = propertyChanged)
 
-    executeFlag        : BoolProperty(default = False, update = AnimationNode.refresh)
-    showSettings       : BoolProperty(name = "Export Settings", default = False, update = AnimationNode.refresh)
-    sequence           : BoolProperty(name = "Export as sequence", default = True, update= AnimationNode.refresh)
+    executeFlag        : BoolProperty(default = False, update = propertyChanged)
+    showSettings       : BoolProperty(name = "Export Settings", default = False, update = propertyChanged)
+    sequence           : BoolProperty(name = "Export as sequence", default = True, update= propertyChanged)
 
     def create(self):
         self.newInput(VectorizedSocket("Object", "useObjectList",
