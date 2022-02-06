@@ -2,7 +2,6 @@ import bpy
 from bpy.props import *
 from dataclasses import dataclass
 from ... utils import save_to_disk as sd
-from animation_nodes . events import propertyChanged
 from animation_nodes . base_types import AnimationNode
 
 classTypeItems = {
@@ -32,7 +31,7 @@ class BF_DiskCacheWriterNode(bpy.types.Node, AnimationNode):
     bl_width_default = 180
     errorHandlingType = "EXCEPTION"
 
-    classType: EnumProperty(name="Input List Type", default="VECTOR", items=classTypeItems, update=propertyChanged)
+    classType: EnumProperty(name="Input List Type", default="VECTOR", items=classTypeItems, update=AnimationNode.refresh)
 
     def create(self):
         self.newInput("Text", "File Path", "filePath",
