@@ -18,14 +18,15 @@ class BF_DiskCacheReaderNode(bpy.types.Node, AnimationNode):
             value="/tmp/an_cache.npy",
             showFileChooser = True,
             defaultDrawType = "PROPERTY_ONLY")
-        self.newInput("Integer", "Frame", "frame")
+        self.newInput("Integer", "Frame", "frame", value=1)
+        self.newInput("Boolean", "Accumulate", "accumulate", value=False)
         socketType = self.classType.title() + " List"
         self.newOutput(socketType, "Data", "out")
 
     def draw(self, layout):
         layout.prop(self, "classType", text="")
 
-    def execute(self, filePath, frame):
+    def execute(self, filePath, frame, accumulate):
         try:
             if not os.path.exists(filePath):
                 self.raiseErrorMessage("File does not exist")
@@ -43,7 +44,14 @@ class BF_DiskCacheReaderNode(bpy.types.Node, AnimationNode):
             if frame < startFrame:
                 index = 0
             if frame > endFrame:
-                index = -1
+                index = length - 1
+
+            if accumulate and index > 0:
+                result = reader[0]
+                for i in range(min(index + 1, length)):
+                    if i > 0:
+                        result.extend(reader[i])
+                return result
 
             return reader[index]
 
