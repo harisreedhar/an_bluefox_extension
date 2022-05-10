@@ -61,9 +61,13 @@ class BF_SplineTracerNode(bpy.types.Node, AnimationNode):
             return spline
 
         identifier = self.identifier + str(self.nodeIndex)
+
+        if (currentFrame == startFrame) or reset:
+            self.clearCache()
+
         spline = self.nodeCache.get(identifier)
 
-        if (currentFrame == startFrame) or reset or spline is None:
+        if spline is None:
             spline = PolySpline()
             self.nodeCache[identifier] = spline
             return spline
