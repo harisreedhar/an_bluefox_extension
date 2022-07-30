@@ -38,7 +38,7 @@ jobs:
         with:
           owner: JacquesLucke
           repo: animation_nodes
-          tag: master-cd-build
+          tag: v2.2-for-blender-v2.93-cd-build
           file: animation_nodes_headers.zip
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       - name: Extract Headers
