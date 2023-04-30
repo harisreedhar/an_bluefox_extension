@@ -109,6 +109,7 @@ class BF_UtilityMenu(bpy.types.Menu):
         insertNode(layout, "an_bf_AlembicExporterNode", "Alembic Exporter")
         insertNode(layout, "an_bf_AutoFitVectorsNode", "Auto Fit Vectors")
         insertNode(layout, "an_bf_AutoFitFloatsNode", "Auto Fit Floats")
+        insertNode(layout, "an_bf_ClampVectorNode", "Clamp Vector")
         insertNode(layout, "an_bf_CSV_WriterNode", "CSV Writer")
         insertNode(layout, "an_bf_DiskCacheReaderNode", "Disk Cache Reader")
         insertNode(layout, "an_bf_DiskCacheWriterNode", "Disk Cache Writer")
