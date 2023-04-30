@@ -21,14 +21,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Install wget for Windows
-        if: matrix.os == 'windows-latest'
+      - name: Get AN Header Link
+        run: echo "::set-env name=DOWNLOAD_LINK::https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip"
+      - name: Download AN Headers
         run: |
-          Invoke-WebRequest -Uri https://eternallybored.org/misc/wget/releases/wget-1.21.3-win64.zip -OutFile wget.zip
-          Expand-Archive wget.zip -DestinationPath $env:ProgramFiles\wget -Force
-          $env:Path += ";$env:ProgramFiles\wget\bin"
-      - name: Download Animation Nodes Headers
-        run: wget https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip    
+          if [ ${{ matrix.os }} == 'windows-latest' ]; then
+            iwr $env:DOWNLOAD_LINK -OutFile animation_nodes_headers.zip
+          else
+            wget $DOWNLOAD_LINK -O animation_nodes_headers.zip
+          fi   
       - name: Extract Headers
         run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Setup Python
