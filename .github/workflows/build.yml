@@ -21,6 +21,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install wget for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          Invoke-WebRequest -Uri https://eternallybored.org/misc/wget/releases/wget-1.21.2-win64.zip -OutFile wget.zip
+          Expand-Archive wget.zip -DestinationPath $env:ProgramFiles\wget -Force
+          $env:Path += ";$env:ProgramFiles\wget\bin"
       - name: Download Animation Nodes Headers
         run: wget https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip    
       - name: Extract Headers
