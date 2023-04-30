@@ -21,19 +21,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Download Animation Nodes Headers
-        run: wget https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip    
-      - name: Extract Headers
-        run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+      - name: Download Animation Nodes' Headers
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: i3h/download-release-asset@v1
+        with:
+          owner: JacquesLucke
+          repo: animation_nodes
+          tag: master-cd-build
+          file: animation_nodes_headers.zip
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      - name: Download Animation Nodes' Headers
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          wget https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip
+      - name: Extract Headers
+        run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install numpy
-          pip install Cython  
+          pip install Cython
       - name: Setup Development Enviroment
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
