@@ -21,9 +21,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Download AN Headers
+      - name: Download Animation Nodes Headers
         run: |
-          if [ "$RUNNER_OS" = "Windows" ]; then i3h download https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip; else wget https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            download_link="https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip"
+            i3h download $download_link
+          else
+            download_link="https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip"
+            wget $download_link
+          fi
       - name: Extract Headers
         run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Setup Python
