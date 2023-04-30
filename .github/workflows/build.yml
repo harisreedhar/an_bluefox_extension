@@ -21,15 +21,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Get AN Header Link
-        run: echo "::set-env name=DOWNLOAD_LINK::https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip"
       - name: Download AN Headers
         run: |
-          if [ ${{ matrix.os }} == 'windows-latest' ]; then
-            iwr $env:DOWNLOAD_LINK -OutFile animation_nodes_headers.zip
-          else
-            wget $DOWNLOAD_LINK -O animation_nodes_headers.zip
-          fi   
+          if [ "$RUNNER_OS" = "Windows" ]; then i3h download https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip; else wget https://github.com/JacquesLucke/animation_nodes/releases/download/master-cd-build/animation_nodes_headers.zip; fi
       - name: Extract Headers
         run: python -m zipfile -e animation_nodes_headers.zip ./
       - name: Setup Python
