@@ -1,1 +1,1 @@
-from . noise . noise4D cimport *
+from . noise4D cimport *

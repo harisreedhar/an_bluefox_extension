@@ -1,14 +1,14 @@
 {
-  "Cython.__version__": "0.29.21",
-  "date": 1603679933,
+  "Cython.__version__": "3.0.8",
+  "date": 1707305990,
   "os.name": "posix",
   "sys.api_version": 1013,
   "sys.platform": "linux",
-  "sys.version": "3.7.9 (default, Aug 31 2020, 12:42:55) \n[GCC 7.3.0]",
+  "sys.version": "3.11.7 | packaged by conda-forge | (main, Dec 23 2023, 14:43:09) [GCC 12.3.0]",
   "sys.version_info": [
     3,
+    11,
     7,
-    9,
     "final",
     0
   ]

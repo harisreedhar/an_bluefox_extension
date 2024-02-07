@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ['3.10']
+        python: ['3.11']
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -43,7 +43,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install numpy
+          pip install numpy==1.24.3
           pip install Cython
       - name: Setup Development Enviroment
         uses: ilammy/msvc-dev-cmd@v1
